@@ -4,6 +4,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import os
+import json
 import uuid
 import asyncio
 import logging
@@ -13,12 +14,13 @@ from typing import List, Optional
 
 import jwt
 import bcrypt
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
+from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 # Absorbed from hub3pixellab/hub3jarvis (legacy repo)
 import sys
@@ -126,6 +128,14 @@ class FeedbackIn(BaseModel):
 class PolicyCheckIn(BaseModel):
     action: str
     context: dict = {}
+
+class BrainImportIn(BaseModel):
+    items: list  # [{content, source?, type?, created_at?}]
+
+class BrainSearchModeIn(BaseModel):
+    query: str
+    limit: int = 5
+    mode: str = "auto"  # auto | semantic | keyword
 
 # ------ Auth Endpoints ------
 @api_router.post("/auth/register")
@@ -475,6 +485,77 @@ async def chat_history(conv_id: str, user=Depends(get_current_user)):
     ).sort("created_at", 1).to_list(500)
     return rows
 
+# ------ Streaming chat via SSE ------
+@api_router.get("/chat/stream")
+async def chat_stream(text: str, conversation_id: str = "jarvis", token: str = "", request: Request = None):
+    """SSE endpoint. Token is passed as ?token= because EventSource cannot set headers."""
+    # Manual auth (EventSource doesn't send Authorization headers)
+    real_token = token or (request.cookies.get("access_token") if request else "")
+    if not real_token:
+        auth = request.headers.get("Authorization", "") if request else ""
+        if auth.startswith("Bearer "):
+            real_token = auth[7:]
+    if not real_token:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(real_token, JWT_SECRET, algorithms=[JWT_ALGO])
+    except jwt.PyJWTError:
+        raise HTTPException(401, "Invalid token")
+    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(401, "User not found")
+
+    conv_id = conversation_id
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Policy check (device commands)
+    lowered = text.lower()
+    is_device_cmd = any(k in lowered for k in ["luz", "light", "acend", "apag", "termostato", "thermostat", "câmera", "camera", " tv", "trancar", "destrancar", "lock", "unlock"])
+
+    await db.chat_messages.insert_one({
+        "id": str(uuid.uuid4()), "conversation_id": conv_id, "user_id": user["id"],
+        "role": "user", "text": text, "created_at": now,
+    })
+
+    # Second Brain context
+    brain_context = await second_brain.get_context(user["id"], text, 3)
+    prompt = text if not brain_context else f"[Second Brain]\n{brain_context}\n\n[User]\n{text}"
+
+    async def event_gen():
+        # Send meta first
+        meta = {"conversation_id": conv_id, "context_used": bool(brain_context), "inline_card": "devices_snapshot" if is_device_cmd else None}
+        yield f"event: meta\ndata: {json.dumps(meta)}\n\n"
+        collected = []
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"jarvis-stream-{conv_id}",
+                system_message=JARVIS_SYSTEM,
+            ).with_model("anthropic", "claude-sonnet-4-6")
+            async for ev in chat.stream_message(UserMessage(text=prompt)):
+                if isinstance(ev, TextDelta):
+                    collected.append(ev.content)
+                    yield f"data: {json.dumps({'delta': ev.content})}\n\n"
+                elif isinstance(ev, StreamDone):
+                    break
+        except Exception as e:
+            logger.error(f"stream error: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)[:200]})}\n\n"
+        full = "".join(collected) or "Sem resposta."
+        now2 = datetime.now(timezone.utc).isoformat()
+        await db.chat_messages.insert_one({
+            "id": str(uuid.uuid4()), "conversation_id": conv_id, "user_id": user["id"],
+            "role": "assistant", "text": full, "created_at": now2,
+            "inline_card": "devices_snapshot" if is_device_cmd else None,
+        })
+        if len(text) > 20 and not is_device_cmd:
+            try: await second_brain.add(user["id"], text, source="chat", k_type="conversation")
+            except Exception: pass
+        yield f"event: done\ndata: {json.dumps({'text': full, 'created_at': now2})}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
+
 @api_router.get("/chat/conversations")
 async def chat_conversations(user=Depends(get_current_user)):
     # Static list of mocked conversations + current Jarvis
@@ -495,8 +576,31 @@ async def brain_add(body: BrainAddIn, user=Depends(get_current_user)):
     return entry
 
 @api_router.post("/brain/search")
-async def brain_search(body: BrainSearchIn, user=Depends(get_current_user)):
-    return await second_brain.search(user["id"], body.query, body.limit)
+async def brain_search(body: BrainSearchModeIn, user=Depends(get_current_user)):
+    return await second_brain.search(user["id"], body.query, body.limit, body.mode)
+
+@api_router.post("/brain/import")
+async def brain_import_json(body: BrainImportIn, user=Depends(get_current_user)):
+    """Bulk import from JSON body: {items: [{content, source?, type?, created_at?}]}"""
+    return await second_brain.add_bulk(user["id"], body.items)
+
+@api_router.post("/brain/import-file")
+async def brain_import_file(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Bulk import from uploaded JSON file. Accepts either a JSON array or a {knowledge:[...]} object (legacy second-brain.json format)."""
+    import json as _json
+    raw = await file.read()
+    try:
+        payload = _json.loads(raw.decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(400, f"Invalid JSON: {e}")
+    items = payload if isinstance(payload, list) else payload.get("knowledge", [])
+    if not isinstance(items, list):
+        raise HTTPException(400, "JSON must be an array or object with 'knowledge' array")
+    return await second_brain.add_bulk(user["id"], items)
+
+@api_router.post("/brain/reindex")
+async def brain_reindex(user=Depends(get_current_user)):
+    return await second_brain.reindex_missing(user["id"])
 
 @api_router.get("/brain/recent")
 async def brain_recent(user=Depends(get_current_user)):
@@ -560,6 +664,13 @@ async def startup():
     await db.second_brain_prefs.create_index([("user_id", 1), ("key", 1)], unique=True)
     await db.learning_logs.create_index([("user_id", 1), ("created_at", -1)])
     await db.whitelist.create_index([("user_id", 1), ("phone", 1)], unique=True)
+    # Warm up embeddings model in the background so first user call is fast
+    try:
+        from modules.embeddings import ensure_loaded
+        asyncio.create_task(ensure_loaded())
+        logger.info("Embeddings warm-up task scheduled")
+    except Exception as e:
+        logger.warning(f"embeddings warm-up skipped: {e}")
     # Seed admin
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@hub3.ai").lower()
     admin_password = os.environ.get("ADMIN_PASSWORD", "Hub3Admin!2026")

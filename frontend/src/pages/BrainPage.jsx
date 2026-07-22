@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useApp, api } from "@/contexts/AppContext";
 import AppShell from "@/components/AppShell";
-import { Brain, Plus, Search, Trash2, ShieldCheck, Phone, User as UserIcon, Zap, TrendingUp, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Brain, Plus, Search, Trash2, ShieldCheck, Phone, User as UserIcon, Zap, TrendingUp, ThumbsUp, ThumbsDown, Upload, Sparkles } from "lucide-react";
 
 export default function BrainPage() {
   const { t, lang } = useApp();
@@ -81,7 +81,27 @@ export default function BrainPage() {
               <div className="label-mini mb-3 text-cyan flex items-center gap-2"><Plus size={12}/> {lang==='pt'?'Adicionar conhecimento':'Add knowledge'}</div>
               <textarea data-testid="brain-add-input" value={content} onChange={e=>setContent(e.target.value)} placeholder={lang==='pt'?'Ex: Meu objetivo Q2 é lançar o Project Orion...':'e.g. My Q2 goal is to launch Project Orion...'} rows={4} className="w-full bg-[#0A0E27] border border-cyan-500/25 rounded-lg p-3 text-sm resize-none focus:outline-none focus:border-cyan"/>
               <button onClick={add} data-testid="brain-add-btn" className="btn-primary mt-2 flex items-center gap-2"><Plus size={14}/> {lang==='pt'?'Guardar no cérebro':'Store in brain'}</button>
-              <div className="mt-5 label-mini mb-2 text-cyan flex items-center gap-2"><Search size={12}/> {lang==='pt'?'Buscar':'Search'}</div>
+
+              <div className="mt-4 flex items-center gap-2 border-t border-cyan-500/15 pt-4">
+                <label data-testid="brain-import-label" className="btn-secondary flex items-center gap-2 cursor-pointer text-xs">
+                  <Upload size={13}/> {lang==='pt'?'Importar JSON':'Import JSON'}
+                  <input type="file" accept="application/json,.json" data-testid="brain-import-file" className="hidden" onChange={async (e)=>{
+                    const f = e.target.files?.[0]; if (!f) return;
+                    const fd = new FormData(); fd.append("file", f);
+                    const { data } = await api.post("/brain/import-file", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                    alert((lang==='pt'?'Importado: ':'Imported: ') + (data.inserted || 0) + (lang==='pt'?' itens':' items'));
+                    load();
+                  }}/>
+                </label>
+                <button onClick={async ()=>{const {data}=await api.post("/brain/reindex"); alert(`${lang==='pt'?'Re-indexados':'Re-indexed'}: ${data.reindexed}`); load();}} data-testid="brain-reindex-btn" className="btn-secondary flex items-center gap-2 text-xs">
+                  <Sparkles size={13}/> {lang==='pt'?'Re-indexar':'Re-index'}
+                </button>
+                <div className="text-[10px] text-slate-500 ml-auto">
+                  {lang==='pt'?'Vetores':'Vectors'}: <span className="text-cyan font-bold">{stats.with_embeddings||0}/{stats.total_knowledge||0}</span>
+                </div>
+              </div>
+
+              <div className="mt-5 label-mini mb-2 text-cyan flex items-center gap-2"><Search size={12}/> {lang==='pt'?'Buscar semântica':'Semantic search'}</div>
               <div className="flex gap-2">
                 <input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} data-testid="brain-search-input" placeholder={lang==='pt'?'Ex: projeto orion':'e.g. project orion'} className="flex-1 bg-[#0A0E27] border border-cyan-500/25 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan"/>
                 <button onClick={search} data-testid="brain-search-btn" className="btn-secondary">{lang==='pt'?'Buscar':'Search'}</button>
@@ -92,7 +112,14 @@ export default function BrainPage() {
                   {searchRes.map(r => (
                     <div key={r.id} className="border border-cyan-500/20 rounded-lg p-2 text-xs">
                       <div className="text-slate-300">{r.content}</div>
-                      <div className="text-[10px] text-slate-500 mt-1">score {r.relevance_score} · {r.source}</div>
+                      <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
+                        <span>
+                          {r.match === 'semantic'
+                            ? <><span className="text-cyan">semantic</span> · sim {(r.similarity*100).toFixed(1)}%</>
+                            : <>keyword · score {r.relevance_score}</>}
+                        </span>
+                        <span>{r.source}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

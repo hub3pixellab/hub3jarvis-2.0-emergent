@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useApp, api } from "@/contexts/AppContext";
 import AppShell from "@/components/AppShell";
-import { Trophy, Cog, Send, User, Info, TrendingDown, Cpu, ArrowRight, Award } from "lucide-react";
+import { Trophy, Cog, Send, User, Info, TrendingDown, Cpu, ArrowRight, Award, ThumbsUp, ThumbsDown } from "lucide-react";
 
 const MODELS = [
   { key: "claude", name: "Claude Sonnet 4.6", cost: 0.003, letter: "A", tone: "#c8f" },
@@ -14,15 +14,26 @@ export default function ConsensusPage() {
   const [q, setQ] = useState("Explain the impact of quantum computing on cybersecurity and encryption algorithms.");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [feedback, setFeedback] = useState(null); // 'positive' | 'negative' | 'neutral'
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   const ask = async () => {
     if (!q.trim()) return;
-    setLoading(true);
+    setLoading(true); setFeedback(null); setFeedbackSent(false);
     try {
       const { data } = await api.post("/consensus/query", { question: q });
       setResult(data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  const sendFeedback = async (fb) => {
+    if (!result?.log_id || feedbackSent) return;
+    setFeedback(fb);
+    setFeedbackSent(true);
+    try {
+      await api.post("/learning/feedback", { log_id: result.log_id, feedback: fb, comment: "" });
+    } catch (e) { console.error(e); setFeedbackSent(false); }
   };
 
   const winner = result?.winner;
@@ -126,6 +137,21 @@ export default function ConsensusPage() {
                     <div className="text-lg font-black text-green-400">{winner.confidence}%</div>
                   </div>
                 )}
+                {result?.log_id && (
+                  <div className="mt-2 flex items-center justify-between border border-cyan-500/25 rounded-lg p-2">
+                    <div className="text-xs text-slate-400">{t.helpful || 'Was this helpful?'}</div>
+                    <div className="flex gap-1.5">
+                      <button data-testid="feedback-positive" disabled={feedbackSent} onClick={() => sendFeedback('positive')} className={`w-8 h-8 rounded-full border flex items-center justify-center transition ${feedback==='positive'?'bg-green-500/20 border-green-400 text-green-400':'border-cyan-500/25 text-slate-400 hover:text-green-400 hover:border-green-500/40'} disabled:opacity-70`}>
+                        <ThumbsUp size={13}/>
+                      </button>
+                      <button data-testid="feedback-neutral" disabled={feedbackSent} onClick={() => sendFeedback('neutral')} className={`w-8 h-8 rounded-full border flex items-center justify-center transition ${feedback==='neutral'?'bg-cyan-500/20 border-cyan text-cyan':'border-cyan-500/25 text-slate-400 hover:text-cyan hover:border-cyan-500/60'} disabled:opacity-70 text-[10px] font-bold`}>–</button>
+                      <button data-testid="feedback-negative" disabled={feedbackSent} onClick={() => sendFeedback('negative')} className={`w-8 h-8 rounded-full border flex items-center justify-center transition ${feedback==='negative'?'bg-red-500/20 border-red-400 text-red-400':'border-cyan-500/25 text-slate-400 hover:text-red-400 hover:border-red-500/40'} disabled:opacity-70`}>
+                        <ThumbsDown size={13}/>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {feedbackSent && <div className="text-[10px] text-green-400 text-center mt-1">{t.thanks || 'Thanks for your feedback!'}</div>}
               </div>
             </div>
 

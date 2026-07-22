@@ -25,11 +25,43 @@ export default function ChatPage() {
     const nowIso = new Date().toISOString();
     setMessages(m => [...m, {id:`tmp-${Date.now()}`, role:"user", text, created_at: nowIso}]);
     setSending(true);
-    try {
-      const { data } = await api.post("/chat/send", { text, conversation_id: active });
-      setMessages(m => [...m, { id: `ai-${Date.now()}`, role:"assistant", text: data.reply, created_at: data.created_at, inline_card: data.inline_card }]);
-    } catch (e) { console.error(e); }
-    finally { setSending(false); }
+
+    // Streaming via SSE
+    const token = localStorage.getItem("hub3_token") || "";
+    const url = `${process.env.REACT_APP_BACKEND_URL}/api/chat/stream?text=${encodeURIComponent(text)}&conversation_id=${encodeURIComponent(active)}&token=${encodeURIComponent(token)}`;
+    const es = new EventSource(url);
+    const aiId = `ai-${Date.now()}`;
+    let aiText = "";
+    let inlineCard = null;
+    setMessages(m => [...m, { id: aiId, role: "assistant", text: "", created_at: new Date().toISOString(), streaming: true }]);
+    es.addEventListener("meta", (ev) => {
+      try {
+        const meta = JSON.parse(ev.data);
+        inlineCard = meta.inline_card || null;
+      } catch {}
+    });
+    es.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        if (data.delta) {
+          aiText += data.delta;
+          setMessages(m => m.map(x => x.id === aiId ? { ...x, text: aiText, inline_card: inlineCard } : x));
+        }
+      } catch {}
+    };
+    es.addEventListener("done", (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        setMessages(m => m.map(x => x.id === aiId ? { ...x, text: data.text || aiText, created_at: data.created_at, inline_card: inlineCard, streaming: false } : x));
+      } catch {}
+      es.close();
+      setSending(false);
+    });
+    es.onerror = () => {
+      es.close();
+      setSending(false);
+      setMessages(m => m.map(x => x.id === aiId ? { ...x, text: aiText || "Erro no streaming.", streaming: false } : x));
+    };
   };
 
   const timeStr = (iso) => new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -116,7 +148,7 @@ export default function ChatPage() {
                 <div className={`flex gap-2 ${m.role==='user'?'justify-end':'justify-start'}`}>
                   {m.role !== 'user' && <div className="w-8 h-8 rounded-full border-2 border-cyan bg-[#0F1729] flex items-center justify-center shrink-0"><Bot size={13} className="text-cyan"/></div>}
                   <div className={`${m.role==='user'?'bubble-user':'bubble-ai'} px-3.5 py-2 max-w-[70%]`}>
-                    <div className="text-sm whitespace-pre-wrap">{m.text}</div>
+                    <div className="text-sm whitespace-pre-wrap">{m.text}{m.streaming && <span className="inline-block w-1.5 h-3.5 bg-cyan align-middle ml-0.5 animate-pulse"/>}</div>
                     <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${m.role==='user'?'text-slate-800':'text-slate-500'}`}>
                       {timeStr(m.created_at)} {m.role==='user' && <Check size={10}/>}
                     </div>

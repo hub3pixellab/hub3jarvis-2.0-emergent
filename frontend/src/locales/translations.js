@@ -41,6 +41,7 @@ export const translations = {
     chatSearch: "Search or start new chat", today: "Today", typeMessage: "Ei Hub, turn on the lights",
     hub3SmartLiving: "Hub3 Smart Living", connectingFuture: "Connecting the future of your home.",
     noAccount: "Don't have an account?", haveAccount: "Already have an account?",
+    helpful: "Was this helpful?", thanks: "Thanks for your feedback!",
     verified: "Verified",
   },
   pt: {
@@ -85,6 +86,7 @@ export const translations = {
     chatSearch: "Buscar ou iniciar novo chat", today: "Hoje", typeMessage: "Ei Hub, acenda as luzes",
     hub3SmartLiving: "Hub3 Smart Living", connectingFuture: "Conectando o futuro da sua casa.",
     noAccount: "Não tem uma conta?", haveAccount: "Já tem uma conta?",
+    helpful: "Isso foi útil?", thanks: "Obrigado pelo feedback!",
     verified: "Verificado",
   },
 };
