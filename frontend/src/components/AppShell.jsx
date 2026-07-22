@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Network, HouseWifi, MessageCircle, LogOut, Globe2, Bell, Calendar, Settings } from "lucide-react";
+import { Home, Network, HouseWifi, MessageCircle, Brain, LogOut, Globe2, Bell, Calendar, Settings } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 
 export default function AppShell({ children }) {
@@ -11,6 +11,7 @@ export default function AppShell({ children }) {
   const navItems = [
     { to: "/dashboard", icon: Home, label: t.dashboard, testid: "nav-dashboard" },
     { to: "/consensus", icon: Network, label: t.consensus, testid: "nav-consensus" },
+    { to: "/brain", icon: Brain, label: lang==='pt'?'Cérebro':'Brain', testid: "nav-brain" },
     { to: "/smart-home", icon: HouseWifi, label: t.smartHome, testid: "nav-smart-home" },
     { to: "/chat", icon: MessageCircle, label: t.chat, testid: "nav-chat" },
   ];

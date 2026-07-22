@@ -20,6 +20,13 @@ from pydantic import BaseModel, Field, EmailStr
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
+# Absorbed from hub3pixellab/hub3jarvis (legacy repo)
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+from modules.policy_engine import policy_engine
+from modules.second_brain import make_second_brain
+from modules.self_learning import make_learning_engine
+
 # ------ Setup ------
 MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ['DB_NAME']
@@ -29,6 +36,8 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
+second_brain = make_second_brain(db)
+learning_engine = make_learning_engine(db)
 
 app = FastAPI(title="Hub3 JARVIS v4.2")
 api_router = APIRouter(prefix="/api")
@@ -95,6 +104,28 @@ class ChatMessageIn(BaseModel):
 class DeviceToggleIn(BaseModel):
     device_id: str
     state: dict
+
+class BrainAddIn(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+    source: str = "chat"
+    k_type: str = "insight"
+
+class BrainSearchIn(BaseModel):
+    query: str
+    limit: int = 5
+
+class BrainPrefIn(BaseModel):
+    key: str
+    value: str
+
+class FeedbackIn(BaseModel):
+    log_id: str
+    feedback: str  # positive | negative | neutral
+    comment: str = ""
+
+class PolicyCheckIn(BaseModel):
+    action: str
+    context: dict = {}
 
 # ------ Auth Endpoints ------
 @api_router.post("/auth/register")
@@ -221,7 +252,10 @@ async def _call_model(m: dict, question: str):
 @api_router.post("/consensus/query")
 async def consensus_query(body: ConsensusQuery, user=Depends(get_current_user)):
     t0 = time.time()
-    results = await asyncio.gather(*[_call_model(m, body.question) for m in CONSENSUS_MODELS])
+    # Second Brain: inject relevant context
+    brain_context = await second_brain.get_context(user["id"], body.question, 3)
+    prompt = body.question if not brain_context else f"[Second Brain context]\n{brain_context}\n\n[User question]\n{body.question}"
+    results = await asyncio.gather(*[_call_model(m, prompt) for m in CONSENSUS_MODELS])
     ranked = sorted(results, key=lambda r: r["confidence"], reverse=True)
     winner = ranked[0] if ranked else None
     total_cost = round(sum(r["cost"] for r in results), 5)
@@ -230,6 +264,14 @@ async def consensus_query(body: ConsensusQuery, user=Depends(get_current_user)):
     avg_conf = int(sum(confidences)/len(confidences)) if confidences else 0
     spread = (max(confidences) - min(confidences)) if len(confidences) > 1 else 0
     agreement = "High" if spread < 10 else ("Medium" if spread < 20 else "Low")
+
+    # Self-Learning: log the interaction
+    log_id = None
+    if winner and winner.get("response"):
+        log_id = await learning_engine.log_interaction(
+            user["id"], body.question, winner["response"],
+            winner["display"], winner["confidence"] / 100.0, total_cost,
+        )
 
     record = {
         "id": str(uuid.uuid4()), "user_id": user["id"], "question": body.question,
@@ -245,6 +287,8 @@ async def consensus_query(body: ConsensusQuery, user=Depends(get_current_user)):
         "results": results,
         "ranked": [{"key": r["key"], "display": r["display"], "icon": r["icon"], "confidence": r["confidence"]} for r in ranked],
         "winner": winner,
+        "log_id": log_id,
+        "context_used": bool(brain_context),
         "metrics": {
             "total_cost": total_cost, "total_time": total_time,
             "models_responded": sum(1 for r in results if r["error"] is None),
@@ -362,11 +406,35 @@ async def chat_send(body: ChatMessageIn, user=Depends(get_current_user)):
     conv_id = body.conversation_id or str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
+    # Policy Engine: check device_control if command detected
+    lowered = body.text.lower()
+    is_device_cmd = any(k in lowered for k in ["luz", "light", "acend", "apag", "termostato", "thermostat", "câmera", "camera", "tv", "trancar", "destrancar", "lock", "unlock"])
+    policy_warning = None
+    if is_device_cmd:
+        pol = await policy_engine.evaluate(user["id"], "device_control", {}, db)
+        if pol["warnings"]:
+            policy_warning = pol["warnings"][0]
+        if not pol["allowed"]:
+            await db.chat_messages.insert_one({
+                "id": str(uuid.uuid4()), "conversation_id": conv_id, "user_id": user["id"],
+                "role": "user", "text": body.text, "created_at": now,
+            })
+            blocked_msg = f"⛔ {pol['warnings'][0]}"
+            await db.chat_messages.insert_one({
+                "id": str(uuid.uuid4()), "conversation_id": conv_id, "user_id": user["id"],
+                "role": "assistant", "text": blocked_msg, "created_at": now,
+            })
+            return {"conversation_id": conv_id, "reply": blocked_msg, "inline_card": None, "policy_blocked": True, "created_at": now}
+
     # Save user message
     await db.chat_messages.insert_one({
         "id": str(uuid.uuid4()), "conversation_id": conv_id, "user_id": user["id"],
         "role": "user", "text": body.text, "created_at": now,
     })
+
+    # Second Brain: inject context
+    brain_context = await second_brain.get_context(user["id"], body.text, 3)
+    prompt = body.text if not brain_context else f"[Second Brain]\n{brain_context}\n\n[User]\n{body.text}"
 
     reply_text = "Ok, feito!"
     try:
@@ -375,25 +443,30 @@ async def chat_send(body: ChatMessageIn, user=Depends(get_current_user)):
             session_id=f"jarvis-{conv_id}",
             system_message=JARVIS_SYSTEM,
         ).with_model("anthropic", "claude-sonnet-4-6")
-        resp = await chat.send_message(UserMessage(text=body.text))
+        resp = await chat.send_message(UserMessage(text=prompt))
         reply_text = resp if isinstance(resp, str) else str(resp)
     except Exception as e:
         logger.error(f"Chat error: {e}")
         reply_text = "Estou com problemas para responder agora. / I'm having trouble responding right now."
 
-    # Detect device action from user text (very simple keyword match to trigger inline cards)
-    lowered = body.text.lower()
-    inline_card = None
-    if any(k in lowered for k in ["luz", "light", "acend", "apag"]):
-        inline_card = "devices_snapshot"
-
+    inline_card = "devices_snapshot" if is_device_cmd else None
     now2 = datetime.now(timezone.utc).isoformat()
     ai_msg = {
         "id": str(uuid.uuid4()), "conversation_id": conv_id, "user_id": user["id"],
         "role": "assistant", "text": reply_text, "created_at": now2, "inline_card": inline_card,
+        "policy_warning": policy_warning,
     }
     await db.chat_messages.insert_one(ai_msg)
-    return {"conversation_id": conv_id, "reply": reply_text, "inline_card": inline_card, "created_at": now2}
+
+    # Second Brain: memorize salient short user messages (>20 chars, not a device cmd)
+    if len(body.text) > 20 and not is_device_cmd:
+        try:
+            await second_brain.add(user["id"], body.text, source="chat", k_type="conversation")
+        except Exception:
+            pass
+
+    return {"conversation_id": conv_id, "reply": reply_text, "inline_card": inline_card,
+             "policy_warning": policy_warning, "created_at": now2}
 
 @api_router.get("/chat/history/{conv_id}")
 async def chat_history(conv_id: str, user=Depends(get_current_user)):
@@ -415,11 +488,78 @@ async def chat_conversations(user=Depends(get_current_user)):
         {"id": "suporte", "name": "Suporte Hub3", "avatar_type": "support", "last": "Como podemos ajudar?", "time": "Sexta-feira", "unread": 0},
     ]
 
+# ------ Second Brain (absorbed from legacy repo) ------
+@api_router.post("/brain/add")
+async def brain_add(body: BrainAddIn, user=Depends(get_current_user)):
+    entry = await second_brain.add(user["id"], body.content, body.source, body.k_type)
+    return entry
+
+@api_router.post("/brain/search")
+async def brain_search(body: BrainSearchIn, user=Depends(get_current_user)):
+    return await second_brain.search(user["id"], body.query, body.limit)
+
+@api_router.get("/brain/recent")
+async def brain_recent(user=Depends(get_current_user)):
+    return await second_brain.list_recent(user["id"], 20)
+
+@api_router.get("/brain/stats")
+async def brain_stats(user=Depends(get_current_user)):
+    return await second_brain.stats(user["id"])
+
+@api_router.post("/brain/pref")
+async def brain_set_pref(body: BrainPrefIn, user=Depends(get_current_user)):
+    await second_brain.add_preference(user["id"], body.key, body.value)
+    return {"ok": True}
+
+@api_router.get("/brain/prefs")
+async def brain_get_prefs(user=Depends(get_current_user)):
+    return await second_brain.get_preferences(user["id"])
+
+# ------ Self-Learning (absorbed from legacy repo) ------
+@api_router.post("/learning/feedback")
+async def learning_feedback(body: FeedbackIn, user=Depends(get_current_user)):
+    return await learning_engine.add_feedback(body.log_id, body.feedback, body.comment)
+
+@api_router.get("/learning/patterns")
+async def learning_patterns(user=Depends(get_current_user)):
+    return await learning_engine.get_user_patterns(user["id"])
+
+@api_router.get("/learning/recent")
+async def learning_recent(user=Depends(get_current_user)):
+    return await learning_engine.recent(user["id"], 10)
+
+# ------ Policy Engine (absorbed from legacy repo) ------
+@api_router.post("/policy/check")
+async def policy_check(body: PolicyCheckIn, user=Depends(get_current_user)):
+    return await policy_engine.evaluate(user["id"], body.action, body.context, db)
+
+@api_router.get("/policy/whitelist")
+async def policy_whitelist_list(user=Depends(get_current_user)):
+    rows = await db.whitelist.find({"user_id": user["id"]}, {"_id": 0}).to_list(200)
+    return rows
+
+@api_router.post("/policy/whitelist")
+async def policy_whitelist_add(body: dict, user=Depends(get_current_user)):
+    phone = body.get("phone"); name = body.get("name"); level = body.get("level", "absolute")
+    if not phone or not name:
+        raise HTTPException(400, "phone and name required")
+    await db.whitelist.update_one(
+        {"user_id": user["id"], "phone": phone},
+        {"$set": {"user_id": user["id"], "phone": phone, "name": name, "level": level,
+                   "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True}
+
 # ------ Startup ------
 @app.on_event("startup")
 async def startup():
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
+    await db.second_brain_knowledge.create_index([("user_id", 1), ("created_at", -1)])
+    await db.second_brain_prefs.create_index([("user_id", 1), ("key", 1)], unique=True)
+    await db.learning_logs.create_index([("user_id", 1), ("created_at", -1)])
+    await db.whitelist.create_index([("user_id", 1), ("phone", 1)], unique=True)
     # Seed admin
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@hub3.ai").lower()
     admin_password = os.environ.get("ADMIN_PASSWORD", "Hub3Admin!2026")

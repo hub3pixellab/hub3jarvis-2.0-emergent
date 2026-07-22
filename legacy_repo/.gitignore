@@ -1,0 +1,17 @@
+# Ambientes virtuais e Python
+venv/
+__pycache__/
+*.pyc
+
+# Dados de containers e bancos de dados pesados
+ollama/
+mongodb-data/
+bitwarden/
+n8n/
+data/
+repos/
+knowledge-vault/
+
+# Arquivos de sistema do macOS
+.DS_Store
+._*

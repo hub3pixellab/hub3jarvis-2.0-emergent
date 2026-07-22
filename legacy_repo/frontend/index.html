@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hub3 v4.2</title>
+<script src="config.js"></script>
+<script src="toast.js"></script>
+<style>
+:root{--bg:#050810;--bg-card:#0d1420;--bg-input:#131c2e;--cyan:#00d4ff;--orange:#ff8c00;--green:#00e676;--red:#ff4444;--text:#e0e7f0;--text-muted:#5a6d8a;--border:#1a2d52;--glow-cyan:0 0 20px rgba(0,212,255,0.15);--glow-orange:0 0 20px rgba(255,140,0,0.15)}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{font-size:24px;font-weight:800;color:var(--cyan);letter-spacing:3px;text-shadow:0 0 15px rgba(0,212,255,0.4)}
+.version{font-size:10px;color:var(--text-muted);border:1px solid var(--border);padding:2px 10px;border-radius:4px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.header-right{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-muted)}
+.layout{display:grid;grid-template-columns:210px 1fr 310px;gap:12px;padding:12px;max-width:1920px;margin:0 auto;height:calc(100vh - 54px)}
+@media(max-width:1400px){.layout{grid-template-columns:200px 1fr 280px}}
+@media(max-width:1100px){.layout{grid-template-columns:200px 1fr}.right-panel{display:none}}
+@media(max-width:768px){.layout{grid-template-columns:1fr;height:auto}.sidebar{display:none}}
+.sidebar{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.sidebar h3{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin:10px 4px 6px}
+.sidebar h3:first-child{margin-top:0}
+.nav-item{padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-muted);transition:all 0.2s;margin-bottom:1px;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg-input);color:var(--text)}
+.nav-item.active{background:var(--bg-input);color:var(--cyan);border-left-color:var(--cyan);box-shadow:var(--glow-cyan)}
+.nav-icon{width:16px;text-align:center;font-size:14px}
+.sidebar-quote{margin-top:auto;padding:10px;font-size:11px;color:var(--text-muted);font-style:italic;border-top:1px solid var(--border);line-height:1.5}
+.main{display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.card-glow{border-color:rgba(0,212,255,0.2);box-shadow:var(--glow-cyan)}
+.card-title{font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+.chat-box{height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--bg);border-radius:10px;border:1px solid var(--border);margin-bottom:10px}
+.chat-msg{max-width:75%;padding:9px 13px;border-radius:13px;font-size:14px;line-height:1.5}
+.chat-msg.user{align-self:flex-end;background:var(--cyan);color:var(--bg);font-weight:500}
+.chat-msg.hub3{align-self:flex-start;background:var(--bg-input);color:var(--text);border:1px solid var(--border)}
+.chat-input-row{display:flex;gap:8px}
+.chat-input{flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:11px 16px;color:var(--text);font-size:14px;outline:none}
+.chat-input:focus{border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+.btn{background:var(--cyan);color:var(--bg);border:none;border-radius:10px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s}
+.btn:hover{box-shadow:var(--glow-cyan);transform:translateY(-1px)}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-orange{background:var(--orange)}
+.btn-orange:hover{box-shadow:var(--glow-orange)}
+.btn-green{background:var(--green)}
+.btn-sm{padding:7px 14px;font-size:12px}
+.voice-bar{background:linear-gradient(135deg,var(--bg-card),var(--bg-input));border:1px solid rgba(0,212,255,0.3);border-radius:14px;padding:20px;text-align:center;cursor:pointer;transition:all 0.3s;box-shadow:var(--glow-cyan);position:relative;overflow:hidden}
+.voice-bar:hover{border-color:var(--cyan)}
+.voice-bar.listening{border-color:var(--orange);box-shadow:var(--glow-orange)}
+.voice-icon{font-size:32px;margin-bottom:6px}
+.voice-text{font-size:18px;font-weight:700;color:var(--cyan);letter-spacing:3px}
+.voice-bar.listening .voice-text{color:var(--orange)}
+.voice-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+.waveform{display:flex;gap:3px;justify-content:center;margin-top:10px;height:24px;align-items:center}
+.wave-bar{width:3px;background:var(--cyan);border-radius:2px;animation:wave 1s ease-in-out infinite}
+.voice-bar.listening .wave-bar{background:var(--orange)}
+@keyframes wave{0%,100%{height:6px}50%{height:20px}}
+.wave-bar:nth-child(2){animation-delay:0.1s}
+.wave-bar:nth-child(3){animation-delay:0.2s}
+.wave-bar:nth-child(4){animation-delay:0.3s}
+.wave-bar:nth-child(5){animation-delay:0.15s}
+.wave-bar:nth-child(6){animation-delay:0.25s}
+.wave-bar:nth-child(7){animation-delay:0.05s}
+.right-panel{display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.mini-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:13px}
+.mini-card-title{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:6px}
+.mini-card-value{font-size:20px;font-weight:800;color:var(--cyan)}
+.mini-card-value.orange{color:var(--orange)}
+.mini-card-value.green{color:var(--green)}
+.mini-card-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+.mini-card-text{font-size:12px;color:var(--text);line-height:1.4;margin-top:4px}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase}
+.status-badge.online{background:rgba(0,230,118,0.15);color:var(--green);border:1px solid rgba(0,230,118,0.3)}
+.status-badge.offline{background:rgba(255,68,68,0.15);color:var(--red);border:1px solid rgba(255,68,68,0.3)}
+.status-badge.installed{background:rgba(0,212,255,0.15);color:var(--cyan);border:1px solid rgba(0,212,255,0.3)}
+.progress-ring{width:54px;height:54px;border-radius:50%;background:conic-gradient(var(--orange) 72%,var(--border) 0);display:flex;align-items:center;justify-content:center;margin:6px auto 0}
+.progress-inner{width:42px;height:42px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--orange)}
+.consensus-bar-container{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px}
+.consensus-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--orange));transition:width 0.5s}
+.ai-model-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:11px;border-bottom:1px solid var(--border)}
+.ai-model-row:last-child{border-bottom:none}
+.ai-model-name{color:var(--text)}
+.ai-model-score{color:var(--cyan);font-weight:700}
+.services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.service-card{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:13px;text-align:center}
+.service-card.online{border-color:rgba(0,230,118,0.3)}
+.service-card.offline{border-color:rgba(255,68,68,0.3)}
+.service-name{font-size:13px;font-weight:600;margin-bottom:5px}
+.vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.vault-item{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:11px;text-align:center}
+.vault-cat{font-size:11px;font-weight:600;color:var(--cyan);margin-bottom:3px}
+.vault-count{font-size:17px;font-weight:800}
+.vault-size{font-size:10px;color:var(--text-muted)}
+.repo-card{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:9px}
+.repo-name{font-size:14px;font-weight:600;color:var(--cyan);margin-bottom:5px}
+.commit-item{font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.commit-sha{color:var(--orange);font-family:monospace;font-size:11px}
+.commit-msg{color:var(--text);flex:1}
+.commit-date{color:var(--text-muted);font-size:10px}
+.lang-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;margin:2px;background:var(--bg);border:1px solid var(--border)}
+.scraper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:11px}
+.scraper-card{background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:14px}
+.scraper-card.installed{border-color:rgba(0,230,118,0.3)}
+.scraper-name{font-size:14px;font-weight:700;color:var(--cyan)}
+.scraper-desc{font-size:11px;color:var(--text-muted);line-height:1.4;margin:6px 0 8px}
+.scraper-meta{font-size:10px;color:var(--text-muted);margin-bottom:7px}
+.scraper-actions{display:flex;gap:5px}
+.form-group{margin-bottom:9px}
+.form-label{font-size:12px;color:var(--text-muted);margin-bottom:3px;display:block}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:14px;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--cyan)}
+.form-textarea{min-height:65px;resize:vertical}
+.section{display:none}
+.section.active{display:block}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.loading{text-align:center;padding:14px;color:var(--text-muted);font-size:13px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse-glow{0%,100%{filter:drop-shadow(0 0 12px var(--cyan))}50%{filter:drop-shadow(0 0 24px var(--cyan))}}
+.quote{text-align:center;font-size:10px;color:var(--text-muted);font-style:italic;padding:6px}
+.neural-container{position:relative;width:100%;height:320px;display:flex;align-items:center;justify-content:center}
+.neural-svg{width:100%;height:100%}
+.neural-node{fill:var(--bg-input);stroke:var(--cyan);stroke-width:2;cursor:pointer;transition:all 0.3s;filter:drop-shadow(0 0 4px rgba(0,212,255,0.3))}
+.neural-node:hover{fill:var(--cyan);filter:drop-shadow(0 0 8px var(--cyan))}
+.neural-node.center{fill:var(--cyan);stroke:var(--cyan);filter:drop-shadow(0 0 16px var(--cyan));animation:pulse-glow 3s infinite}
+.neural-line{stroke:var(--cyan);stroke-width:1.5;opacity:0.4;transition:opacity 0.3s;filter:drop-shadow(0 0 3px rgba(0,212,255,0.3))}
+.neural-node:hover+.neural-line{opacity:1}
+.neural-label{fill:var(--text-muted);font-size:10px;text-anchor:middle;font-weight:600}
+.neural-label.center{fill:var(--cyan);font-size:13px;font-weight:800}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.stat-value{font-size:22px;font-weight:800;color:var(--cyan)}
+.stat-value.orange{color:var(--orange)}
+.stat-value.green{color:var(--green)}
+.stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.personality-text{font-size:13px;color:var(--text);line-height:1.5;text-align:center;padding:10px;font-style:italic}
+.iot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px}
+.iot-card{background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:14px}
+.iot-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.iot-card-name{font-size:13px;font-weight:600;color:var(--cyan)}
+.iot-toggle{width:36px;height:20px;border-radius:10px;background:var(--border);position:relative;cursor:pointer;transition:background 0.2s}
+.iot-toggle.on{background:var(--green)}
+.iot-toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:white;top:2px;left:2px;transition:transform 0.2s}
+.iot-toggle.on::after{transform:translateX(16px)}
+.iot-slider{width:100%;height:5px;border-radius:3px;background:var(--border);position:relative;margin:8px 0}
+.iot-slider-fill{height:100%;border-radius:3px;background:var(--orange)}
+.iot-value{font-size:11px;color:var(--text-muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="header-left"><span class="status-dot"></span><span class="logo">Hub3</span><span class="version">v4.2</span></div>
+<div class="header-right"><span id="header-time">--:--</span><span>Hub3 Pixel Lab</span></div>
+</div>
+<div class="layout">
+<div class="sidebar">
+<h3>Hub3</h3>
+<div class="nav-item active" onclick="showSection('overview')" data-section="overview"><span class="nav-icon">[home]</span> Visao Geral</div>
+<div class="nav-item" onclick="showSection('chat')" data-section="chat"><span class="nav-icon">[chat]</span> Conversar</div>
+
+<h3>Infra</h3>
+<div class="nav-item" onclick="showSection('services')" data-section="services"><span class="nav-icon">[gear]</span> Servicos</div>
+<div class="nav-item" onclick="showSection('vault')" data-section="vault"><span class="nav-icon">[vault]</span> Vault</div>
+<div class="nav-item" onclick="showSection('iot')" data-section="iot"><span class="nav-icon">[home]</span> IoT</div>
+<h3>Dev</h3>
+<div class="nav-item" onclick="showSection('github')" data-section="github"><span class="nav-icon">[git]</span> GitHub</div>
+<div class="nav-item" onclick="showSection('repos')" data-section="repos"><span class="nav-icon">[code]</span> Repos</div>
+<div class="nav-item" onclick="showSection('issues')" data-section="issues"><span class="nav-icon">[issue]</span> Issue</div>
+<div class="nav-item" onclick="showSection('scrapers')" data-section="scrapers"><span class="nav-icon">[spider]</span> Scrapers</div>
+<h3>Sistema</h3>
+<div class="nav-item" onclick="showSection('consensus')" data-section="consensus"><span class="nav-icon">[brain]</span> Consensus</div>
+<div class="nav-item" onclick="showSection('models')" data-section="models"><span class="nav-icon">[cpu]</span> Modelos</div>
+<div class="nav-item" onclick="showSection('autonomy')" data-section="autonomy"><span class="nav-icon">[brain]</span> Autonomia</div>
+<div style="margin-top:14px;text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px">
+<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Life Balance</div>
+<div style="width:50px;height:50px;border-radius:50%;background:conic-gradient(var(--cyan),var(--orange) 78%,var(--border) 0);display:flex;align-items:center;justify-content:center;margin:0 auto">
+<div style="width:38px;height:38px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--cyan)">78%</div>
+</div>
+<div style="font-size:10px;color:var(--green);margin-top:4px">Balanced</div>
+</div>
+<div class="sidebar-quote">"Voce nao precisa de motivacao. Voce precisa de direcao."<br>— Hub3</div>
+</div>
+<div class="main">
+<div class="section active" id="section-overview">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+<div>
+<div style="font-size:20px;font-weight:700;color:var(--text)">Bem-vindo de volta, Diogo</div>
+<div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="greeting-date">--</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<div onclick="showSection('voice')" style="background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(255,140,0,0.15));border:1px solid rgba(0,212,255,0.3);border-radius:20px;padding:10px 20px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='rgba(0,212,255,0.3)'">
+<span style="font-size:18px">🎤</span>
+<span style="font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:2px">Ei Hub</span>
+<div style="display:flex;gap:2px;align-items:center"><div style="width:2px;height:8px;background:var(--cyan);border-radius:1px;animation:wave 0.8s infinite"></div><div style="width:2px;height:12px;background:var(--cyan);border-radius:1px;animation:wave 0.8s infinite 0.1s"></div><div style="width:2px;height:6px;background:var(--cyan);border-radius:1px;animation:wave 0.8s infinite 0.2s"></div><div style="width:2px;height:10px;background:var(--cyan);border-radius:1px;animation:wave 0.8s infinite 0.15s"></div></div>
+</div>
+</div>
+</div>
+<div class="card card-glow">
+<div class="card-title">AI Brain Network</div>
+<div class="personality-text">Voce nao precisa de motivacao. Voce precisa de direcao. Mas, como sempre, voce veio so para ouvir, ne? Tudo bem. Vamos fazer acontecer mesmo assim.</div>
+<div class="neural-container">
+<svg class="neural-svg" viewBox="0 0 400 300">
+<line class="neural-line" x1="200" y1="150" x2="80" y2="50"/>
+<line class="neural-line" x1="200" y1="150" x2="320" y2="50"/>
+<line class="neural-line" x1="200" y1="150" x2="50" y2="150"/>
+<line class="neural-line" x1="200" y1="150" x2="350" y2="150"/>
+<line class="neural-line" x1="200" y1="150" x2="80" y2="250"/>
+<line class="neural-line" x1="200" y1="150" x2="320" y2="250"/>
+<line class="neural-line" x1="200" y1="150" x2="150" y2="30"/>
+<line class="neural-line" x1="200" y1="150" x2="250" y2="270"/>
+<circle class="neural-node center" cx="200" cy="150" r="28"/>
+<text class="neural-label center" x="200" y="155">Hub3</text>
+<circle class="neural-node" cx="80" cy="50" r="18"/>
+<text class="neural-label" x="80" y="53">Voce</text>
+<circle class="neural-node" cx="320" cy="50" r="18"/>
+<text class="neural-label" x="320" y="53">Objetivos</text>
+<circle class="neural-node" cx="50" cy="150" r="18"/>
+<text class="neural-label" x="50" y="153">Carreira</text>
+<circle class="neural-node" cx="350" cy="150" r="18"/>
+<text class="neural-label" x="350" y="153">Projetos</text>
+<circle class="neural-node" cx="80" cy="250" r="18"/>
+<text class="neural-label" x="80" y="253">Financas</text>
+<circle class="neural-node" cx="320" cy="250" r="18"/>
+<text class="neural-label" x="320" y="253">Saude</text>
+<circle class="neural-node" cx="150" cy="30" r="16"/>
+<text class="neural-label" x="150" y="33">Aprendizado</text>
+<circle class="neural-node" cx="250" cy="270" r="16"/>
+<text class="neural-label" x="250" y="273">Relacoes</text>
+</svg>
+</div>
+</div>
+<div class="card" style="margin-top:12px">
+<div class="card-title">Estatísticas</div>
+<div class="stats-row">
+<div class="stat-card"><div class="stat-value" id="stat-insights">28</div><div class="stat-label">Insights Hoje</div><div style="font-size:10px;color:var(--green);margin-top:2px">↑ 18% vs ontem</div></div>
+<div class="stat-card"><div class="stat-value orange" id="stat-decisions">7</div><div class="stat-label">Decisões Apoiadas</div><div style="font-size:10px;color:var(--green);margin-top:2px">↑ 12% vs ontem</div></div>
+<div class="stat-card"><div class="stat-value green" id="stat-time">2.4h</div><div class="stat-label">Tempo Economizado</div><div style="font-size:10px;color:var(--green);margin-top:2px">↑ 0.8h vs ontem</div></div>
+<div class="stat-card"><div class="stat-value orange" id="stat-momentum">85%</div><div class="stat-label">Life Momentum</div><div style="font-size:10px;color:var(--green);margin-top:2px">↑ 5% vs ontem</div></div>
+</div>
+</div>
+<div class="card" style="margin-top:12px">
+<div class="card-title">Atividades Recentes</div>
+<div style="font-size:12px;color:var(--text-muted);line-height:2">
+<div>Plano de carreira atualizado 09:42</div>
+<div>Projeto Q3 revisado 08:15</div>
+<div>Investimento analisado 07:30</div>
+<div>Treino concluido 06:45</div>
+</div>
+</div>
+</div>
+<div class="section" id="section-chat">
+<div class="card card-glow"><div class="card-title">Conversar com Hub3</div>
+<div class="chat-box" id="chat-box"><div class="chat-msg hub3">Ola Sou o Hub3 v4.2 rodando Llama 3.2 localmente</div></div>
+<div class="chat-input-row">
+  <input type="text" class="chat-input" id="chat-input" placeholder="Digite ou fale..." onkeypress="if(event.key==='Enter')sendChat()">
+  <button class="btn btn-mic" onclick="toggleVoice()" id="voice-btn" title="Falar">🎤</button>
+  <button class="btn" onclick="sendChat()" id="chat-btn">Enviar</button>
+</div>
+<div id="voice-result" style="margin-top:8px;min-height:24px;font-size:13px"></div>
+</div></div>
+
+<div class="section" id="section-autonomy">
+<div class="card">
+<div class="card-title">🔬 Painel de Autonomia</div>
+<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">JARVIS opera em loop autonomo — monitorando servicos, analizando logs e aplicando politicas de seguranca em tempo real.</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:14px">
+<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Orquestrador</div>
+<div id="auto-orchestrator" style="font-size:16px;font-weight:600;color:var(--green)">Inicializando...</div>
+</div>
+<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:14px">
+<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Ciclos Executados</div>
+<div id="auto-cycles" style="font-size:16px;font-weight:600;color:var(--cyan)">--</div>
+</div>
+<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:14px">
+<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Servicos Monitorados</div>
+<div id="auto-services" style="font-size:16px;font-weight:600;color:var(--cyan)">--/--</div>
+</div>
+<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:14px">
+<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Saude do Sistema</div>
+<div id="auto-health" style="font-size:16px;font-weight:600;color:var(--green)">--%</div>
+</div>
+</div>
+<div id="auto-services-detail" style="margin-bottom:16px"></div>
+<div id="auto-errors" style="margin-bottom:16px"></div>
+<div style="display:flex;gap:8px;margin-bottom:16px">
+<button class="btn" onclick="runSelfTest()" id="self-test-btn">🧪 Executar Self-Test</button>
+<button class="btn btn-orange" onclick="loadAutonomy()">🔄 Atualizar</button>
+</div>
+<div id="self-test-result" style="margin-bottom:16px"></div>
+<div id="auto-policies"></div>
+</div>
+</div>
+<div class="section" id="section-skills"><div class="card"><div class="card-title">Skills Autonomas</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">JARVIS detecta automaticamente qual skill usar. <span id="skills-total" style="color:var(--cyan)"></span></div><div id="skills-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px"><div class="loading"><span class="spinner"></span> Carregando skills...</div></div><div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)"><div class="card-title">Modo Autonomo</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Digite qualquer coisa e JARVIS decide qual skill usar</div><div class="chat-input-row"><input type="text" class="chat-input" id="auto-input" placeholder="Ex: auditar seguranca..."><button class="btn" onclick="autonomousMode()">Executar</button></div><div id="auto-result" style="margin-top:12px"></div></div></div></div><div class="section" id="section-services"><div class="card"><div class="card-title">Servicos Self-Hosted</div><div class="services-grid" id="services-grid"><div class="loading"><span class="spinner"></span> Carregando...</div></div></div></div>
+<div class="section" id="section-vault"><div class="card"><div class="card-title">Knowledge Vault</div><div id="vault-info" style="margin-bottom:12px;font-size:13px;color:var(--text-muted)"></div><div class="vault-grid" id="vault-grid"><div class="loading"><span class="spinner"></span> Carregando...</div></div></div></div>
+<div class="section" id="section-iot"><div class="card"><div class="card-title">Dispositivos IoT</div><div class="iot-grid" id="iot-grid"></div></div></div>
+<div class="section" id="section-github"><div class="card"><div class="card-title">GitHub</div><div id="github-repos"><div class="loading"><span class="spinner"></span> Carregando...</div></div></div><div class="card" style="margin-top:12px"><div class="card-title">Commits</div><div id="github-commits"><div class="loading"><span class="spinner"></span> Carregando...</div></div></div></div>
+<div class="section" id="section-repos"><div class="card"><div class="card-title">Repos Locais</div><div id="repos-local"><div class="loading"><span class="spinner"></span> Carregando...</div></div></div></div>
+<div class="section" id="section-issues"><div class="card"><div class="card-title">Criar Issue</div><div class="form-group"><label class="form-label">Repo</label><select class="form-select" id="issue-repo"><option value="hub3jarvis">hub3jarvis</option><option value="Site">Site</option></select></div><div class="form-group"><label class="form-label">Titulo</label><input type="text" class="form-input" id="issue-title" placeholder="Titulo"></div><div class="form-group"><label class="form-label">Descricao</label><textarea class="form-textarea" id="issue-body" placeholder="Descreva..."></textarea></div><div class="form-group"><label class="form-label">Labels</label><input type="text" class="form-input" id="issue-labels" placeholder="bug,cliente"></div><button class="btn btn-orange" onclick="createIssue()" id="issue-btn">Criar Issue</button><div id="issue-result" style="margin-top:10px"></div></div></div>
+<div class="section" id="section-scrapers"><div class="card"><div class="card-title">Ferramentas de Scraping</div><div class="scraper-grid" id="scraper-grid"></div></div><div class="card" style="margin-top:12px"><div class="card-title">Executar Scrape</div><div class="form-group"><label class="form-label">Ferramenta</label><select class="form-select" id="scraper-select"><option value="firecrawl">Firecrawl</option><option value="crawl4ai">Crawl4AI</option><option value="browser_use">Browser Use</option><option value="crawlee">Crawlee</option><option value="scrapy">Scrapy</option><option value="markitdown">MarkItDown</option><option value="scrapling">Scrapling</option><option value="autoscaper">AutoScraper</option><option value="curl_impersonate">curl-impersonate</option><option value="scrcpy">scrcpy</option></select></div><div class="form-group"><label class="form-label">URL</label><input type="text" class="form-input" id="scraper-url" placeholder="https://exemplo.com"></div><button class="btn" onclick="runScraper()" id="scraper-run-btn">Executar</button><div id="scraper-result" style="margin-top:10px"></div></div></div>
+<div class="section" id="section-aistudio"><div class="card card-glow"><div class="card-title">AI Studio - Geracao de Imagens e Videos</div>
+<div class="form-group"><label class="form-label">Muapi API Key</label><input type="password" class="form-input" id="muapi-key" placeholder="Cole sua API key da Muapi.ai" onchange="localStorage.setItem('muapi-key', this.value)" onkeyup="localStorage.setItem('muapi-key', this.value)"></div>
+<div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="ai-type" onchange="loadAIModels()"><option value="image">Imagem</option><option value="video">Video</option><option value="lipsync">Lip Sync</option></select></div>
+<div class="form-group"><label class="form-label">Modelo</label><select class="form-select" id="ai-model"></select></div>
+<div class="form-group"><label class="form-label">Prompt</label><textarea class="form-textarea" id="ai-prompt" placeholder="Descreva o que quer gerar..."></textarea></div>
+<div class="form-group"><label class="form-label">Aspect Ratio</label><select class="form-select" id="ai-aspect"><option value="1:1">1:1 (Quadrado)</option><option value="16:9">16:9 (Widescreen)</option><option value="9:16">9:16 (Vertical)</option><option value="4:3">4:3 (Classico)</option><option value="3:2">3:2 (Foto)</option></select></div>
+<div class="form-group"><label class="form-label">URL Imagem Referencia (opcional)</label><input type="text" class="form-input" id="ai-image-url" placeholder="https://..."></div>
+<button class="btn" onclick="generateAI()" id="ai-btn">Gerar</button>
+<div id="ai-result" style="margin-top:14px"></div>
+<div id="ai-history" style="margin-top:14px"></div>
+</div>
+<div class="card" style="margin-top:12px"><div class="card-title">Modelos Disponiveis</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px" id="ai-models-info"></div>
+</div></div>
+<div class="section" id="section-consensus"><div class="card"><div class="card-title">Multi-AI Consensus</div><div class="form-group"><label class="form-label">Prompt</label><textarea class="form-textarea" id="consensus-prompt" placeholder="Digite sua pergunta..."></textarea></div><button class="btn" onclick="runConsensus()" id="consensus-btn">Executar Consensus</button><div id="consensus-result" style="margin-top:12px"></div></div></div>
+<div class="section" id="section-models"><div class="card"><div class="card-title">Modelos Ollama</div><div id="models-list"><div class="loading"><span class="spinner"></span> Carregando...</div></div></div></div>
+</div>
+<div class="right-panel">
+<div class="mini-card"><div class="mini-card-title">Status do Hub</div><div class="mini-card-value green">ONLINE</div><div class="mini-card-sub">Conexoes: 4/4 | Inteligencia: 94%</div></div>
+<div class="mini-card"><div class="mini-card-title">Top Recommendation</div><div class="mini-card-text" style="color:var(--orange);font-weight:600">Focus on Project Orion</div><div class="mini-card-text" style="font-size:11px">High impact opportunity aligned with your goals.</div><div style="margin-top:6px"><span class="status-badge online">92% Consensus</span></div></div>
+<div class="mini-card"><div class="mini-card-title">Proximo Passo</div><div class="mini-card-text">Focar no que move a agulha, nao no que enche a agenda.</div><button class="btn btn-sm" style="margin-top:6px">Ver Plano</button></div>
+<div class="mini-card"><div class="mini-card-title">Insight do Dia</div><div class="mini-card-text" style="font-size:11px">Voce nao precisa de mais tempo. Voce precisa de menos distracoes. Dificil, eu sei. Mas nao impossivel.</div></div>
+<div class="mini-card"><div class="mini-card-title">Progresso Geral</div><div class="progress-ring"><div class="progress-inner">72%</div></div><div class="mini-card-sub" style="text-align:center;margin-top:4px">Evoluindo</div></div>
+<div class="mini-card"><div class="mini-card-title">AI Model Breakdown</div>
+<div class="ai-model-row"><span class="ai-model-name">GPT-4o</span><span class="ai-model-score">94%</span></div><div class="consensus-bar-container" style="margin-bottom:4px"><div class="consensus-bar-fill" style="width:94%"></div></div>
+<div class="ai-model-row"><span class="ai-model-name">Claude 3.5</span><span class="ai-model-score">91%</span></div><div class="consensus-bar-container" style="margin-bottom:4px"><div class="consensus-bar-fill" style="width:91%"></div></div>
+<div class="ai-model-row"><span class="ai-model-name">Gemini 1.5</span><span class="ai-model-score">89%</span></div><div class="consensus-bar-container" style="margin-bottom:4px"><div class="consensus-bar-fill" style="width:89%"></div></div>
+<div class="ai-model-row"><span class="ai-model-name">Llama 3.1</span><span class="ai-model-score">86%</span></div><div class="consensus-bar-container" style="margin-bottom:4px"><div class="consensus-bar-fill" style="width:86%"></div></div>
+<div class="ai-model-row"><span class="ai-model-name">Mistral Large</span><span class="ai-model-score">84%</span></div><div class="consensus-bar-container"><div class="consensus-bar-fill" style="width:84%"></div></div>
+</div>
+<div class="mini-card"><div class="mini-card-title">Lembrete Sarcastico</div><div class="mini-card-text" style="font-size:11px;font-style:italic">Parabens por sobreviver a mais um dia fazendo coisas que voce poderia ter feito melhor ontem. Amanha e uma nova chance. Ou mais uma desculpa.</div></div>
+<div class="quote">"A melhor forma de prever o futuro e cria-lo"<br>— Peter Drucker</div>
+
+
+<script>
+const API = CONFIG.API_BASE;
+const COLORS = {red:'#ff4444',green:'#00e676',blue:'#00d4ff',orange:'#ff8c00',yellow:'#ffd700',violet:'#b388ff',fuchsia:'#e040fb',sky:'#4fc3f7'};
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const section = document.getElementById('section-' + name);
+  if (section) section.classList.add('active');
+  const nav = document.querySelector('[data-section="' + name + '"]');
+  if (nav) nav.classList.add('active');
+  if (name === 'services') loadServices();
+  if (name === 'vault') loadVault();
+  if (name === 'github') loadGithub();
+  if (name === 'repos') loadReposLocal();
+  if (name === 'issues') loadIssues();
+  if (name === 'skills') loadSkills();
+  if (name === 'models') loadModels();
+  if (name === 'scrapers') loadScrapers();
+  if (name === 'aistudio') loadAIModels();
+  if (name === 'iot') loadIoT();
+}
+
+function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice = voices.find(v => v.lang.includes('pt-BR') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Luciana') || v.name.includes('Microsoft')));
+    if (naturalVoice) {
+        utterance.voice = naturalVoice;
+    }
+    window.speechSynthesis.speak(utterance);
+}
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+    };
+}
+
+let recognition;
+let isListening = false;
+let autoRestart = true;
+
+function startMicrophone() {
+    if (isListening) return;
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onstart = function() {
+        isListening = true;
+        const bar = document.getElementById('voice-bar');
+        const icon = document.getElementById('voice-icon');
+        const sub = document.getElementById('voice-sub');
+        if (bar) bar.classList.add('listening');
+        if (icon) icon.textContent = '[stop]';
+        if (sub) sub.textContent = 'Sempre ouvindo... Clique para parar';
+    };
+    recognition.onresult = function(event) {
+        const res = document.getElementById('voice-result');
+        const chatInput = document.getElementById('chat-input');
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+        }
+        if (finalTranscript && chatInput) {
+            chatInput.value = finalTranscript;
+            const enterEvent = new KeyboardEvent('keypress', {key:'Enter', code:'Enter', which:13, keyCode:13, bubbles:true});
+            chatInput.dispatchEvent(enterEvent);
+        }
+    };
+    recognition.onerror = function(event) {
+        isListening = false;
+        if (autoRestart && event.error !== 'not-allowed') setTimeout(startMicrophone, 1000);
+    };
+    recognition.onend = function() {
+        isListening = false;
+        if (autoRestart) setTimeout(startMicrophone, 500);
+    };
+    try { recognition.start(); } catch(e) { Toast.error('Erro: '+e.message);}
+}
+
+function toggleVoice() {
+    const bar = document.getElementById('voice-bar');
+    const icon = document.getElementById('voice-icon');
+    const sub = document.getElementById('voice-sub');
+    if (isListening) {
+        autoRestart = false;
+        if (recognition) { recognition.stop(); recognition = null; }
+        isListening = false;
+        if (bar) bar.classList.remove('listening');
+        if (icon) icon.textContent = '[mic]';
+        if (sub) sub.textContent = 'Microfone desligado';
+    } else {
+        autoRestart = true;
+        startMicrophone();
+    }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const box = document.getElementById('chat-box');
+  const btn = document.getElementById('chat-btn');
+  const text = input.value.trim();
+  if (!text) return;
+  box.innerHTML += '<div class="chat-msg user">' + text.replace(/</g,'&lt;') + '</div>';
+  input.value = '';
+  btn.disabled = true;
+  box.scrollTop = box.scrollHeight;
+  try {
+    const r = await fetch(API + '/api/jarvis/conversar', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensagem:text})});
+    const d = await r.json();
+    const resposta = d.resposta_jarvis||'Sem resposta';
+    box.innerHTML += '<div class="chat-msg hub3">' + resposta + '</div>';
+    // ===== AUTONOMIA =====
+async function loadAutonomy() {
+    try {
+        const r = await fetch(API + '/autonomy/status');
+        const d = await r.json();
+
+        document.getElementById('auto-orchestrator').textContent = d.online ? '🟢 Online' : '🔴 Offline';
+        document.getElementById('auto-orchestrator').style.color = d.online ? 'var(--green)' : 'var(--red)';
+        document.getElementById('auto-cycles').textContent = (d.cycle_count || 0) + ' ciclos';
+        document.getElementById('auto-services').textContent = (d.services_online || 0) + '/' + (d.services_total || 0);
+        document.getElementById('auto-health').textContent = (d.health_pct || 0) + '%';
+        document.getElementById('auto-health').style.color = (d.health_pct || 0) > 50 ? 'var(--green)' : 'var(--red)';
+
+        // Servicos detalhados
+        let svcHtml = '<div style="font-size:14px;font-weight:600;color:var(--cyan);margin-bottom:8px">📊 Servicos Monitorados</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">';
+        for (const [name, s] of Object.entries(d.services || {})) {
+            svcHtml += '<div style="background:var(--bg-input);border:1px solid ' + (s.online ? 'var(--green)' : 'var(--red)') + ';border-radius:8px;padding:10px;text-align:center">';
+            svcHtml += '<div style="font-size:13px;font-weight:600">' + name + '</div>';
+            svcHtml += '<div style="font-size:12px;color:' + (s.online ? 'var(--green)' : 'var(--red)') + '">' + (s.online ? '🟢 Online' : '🔴 Offline') + '</div>';
+            svcHtml += '</div>';
+        }
+        svcHtml += '</div>';
+        document.getElementById('auto-services-detail').innerHTML = svcHtml;
+
+        // Erros recentes
+        const errors = d.errors_recent || [];
+        let errHtml = '<div style="font-size:14px;font-weight:600;color:var(--orange);margin-bottom:8px">⚠️ Erros Recentes (' + errors.length + ')</div>';
+        if (errors.length === 0) {
+            errHtml += '<div style="font-size:13px;color:var(--text-muted)">Nenhum erro na ultima hora</div>';
+        } else {
+            for (const e of errors.slice(0, 5)) {
+                errHtml += '<div style="font-size:12px;color:var(--red);padding:4px 0;border-bottom:1px solid var(--border)">[' + (e.time || '').slice(11,19) + '] ' + (e.error || '') + '</div>';
+            }
+        }
+        document.getElementById('auto-errors').innerHTML = errHtml;
+
+        // Politicas
+        document.getElementById('auto-policies').innerHTML = '<div style="font-size:14px;font-weight:600;color:var(--cyan);margin-bottom:8px">⚙️ Politicas Ativas: ' + (d.policies_active || 0) + '</div>';
+    } catch(e) {
+        Toast.error('Erro ao carregar autonomia: ' + e.message);
+    }
+}
+
+async function runSelfTest() {
+    const btn = document.getElementById('self-test-btn');
+    const resultDiv = document.getElementById('self-test-result');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Executando...';
+    resultDiv.innerHTML = '<div class="loading"><span class="spinner"></span> Rodando testes...</div>';
+    try {
+        const r = await fetch(API + '/api/jarvis/self-test');
+        const d = await r.json();
+        const statusColor = d.status === 'passed' ? 'var(--green)' : 'var(--red)';
+        const statusIcon = d.status === 'passed' ? '✅' : '❌';
+        let html = '<div style="background:var(--bg-input);border:1px solid ' + statusColor + ';border-radius:10px;padding:14px">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+        html += '<div><span style="font-size:20px">' + statusIcon + '</span> <strong style="color:' + statusColor + '">' + d.passed + '/' + d.total + ' passed</strong></div>';
+        html += '<div style="font-size:12px;color:var(--text-muted)">' + d.duration_ms + 'ms</div>';
+        html += '</div>';
+        if (d.failed > 0 || d.errors > 0) {
+            html += '<div style="font-size:12px;color:var(--red)">❌ ' + d.failed + ' falhas ⚠️ ' + d.errors + ' erros</div>';
+        }
+        // Resultados individuais
+        if (d.results && d.results.length > 0) {
+            html += '<div style="margin-top:10px;font-size:12px">';
+            for (const t of d.results.slice(0, 10)) {
+                const ic = t.outcome === 'passed' ? '✅' : '❌';
+                html += '<div style="padding:3px 0">' + ic + ' ' + t.test.split('::').pop() + '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        resultDiv.innerHTML = html;
+        Toast.success('Self-Test: ' + d.passed + '/' + d.total + ' passed');
+    } catch(e) {
+        resultDiv.innerHTML = '<div style="color:var(--red);font-size:13px">Erro: ' + e.message + '</div>';
+        Toast.error('Self-Test falhou: ' + e.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '🧪 Executar Self-Test';
+}
+
+// Adicionar autonomia ao showSection
+const origShow = window.showSection;
+window.showSection = function(name) {
+    if (origShow) origShow(name);
+    if (name === 'autonomy') loadAutonomy();
+};
+
+speakText(resposta);
+  } catch(e) { Toast.error('Erro: '+e.message);
+    box.innerHTML += '<div class="chat-msg hub3" style="color:var(--red)">Erro: ' + e.message + '</div>';
+  }
+  btn.disabled = false;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function loadServices() {
+  const g = document.getElementById('services-grid');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/services/status');
+    const d = await r.json();
+    const sv = d.services || d || {};
+    let h = '';
+    for (const [n, s] of Object.entries(sv)) {
+      if (n === 'ollama') continue;
+      const on = s === 'online' || s === true || (typeof s === 'object' && s.status === 'online');
+      h += '<div class="service-card ' + (on?'online':'offline') + '"><div class="service-name">' + n + '</div><div class="service-status">' + (on?'Online':'Offline') + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhum servico</div>';
+  } catch(e) { Toast.error('Erro: '+e.message); g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadVault() {
+  const g = document.getElementById('vault-grid');
+  const n = document.getElementById('vault-info');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/vault/stats');
+    const d = await r.json();
+    if (n) n.textContent = 'Total: ' + (d.total_files||0) + ' arquivos, ' + (d.total_size_formatted||d.total_size||'0 MB');
+    let h = '';
+    for (const [c, v] of Object.entries(d)) {
+      if (c === 'total_files' || c === 'total_size' || c === 'total_size_formatted') continue;
+      h += '<div class="vault-item"><div class="vault-cat">' + c + '</div><div class="vault-count">' + (typeof v === 'object' ? v.count||v.size||v : v) + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Vault vazio</div>';
+  } catch(e) { Toast.error('Erro: '+e.message); g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadGithub() {
+  const rd = document.getElementById('github-repos');
+  const cd = document.getElementById('github-commits');
+  if (!rd) return;
+  rd.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  if (cd) cd.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/github/repos');
+    const d = await r.json();
+    let h = '';
+    for (const repo of (d.repos||d||[])) {
+      h += '<div class="repo-card"><div class="repo-name">' + (repo.name||repo) + '</div></div>';
+    }
+    rd.innerHTML = h || '<div class="loading">Nenhum repo</div>';
+    if (cd) {
+      const rc = await fetch(API + '/github/repos/hub3jarvis/commits');
+      const dc = await rc.json();
+      let ch = '';
+      for (const c of (dc.commits||dc||[]).slice(0,10)) {
+        ch += '<div class="commit-item"><span class="commit-sha">' + (c.sha||'').slice(0,7) + '</span><span class="commit-msg">' + (c.commit?.message||c.message||'') + '</span></div>';
+      }
+      cd.innerHTML = ch || '<div class="loading">Nenhum commit</div>';
+    }
+  } catch(e) { Toast.error('Erro: '+e.message); rd.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadReposLocal() {
+  const g = document.getElementById('repos-local');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/repos/local');
+    const d = await r.json();
+    let h = '';
+    for (const repo of (d.repos||d||[])) {
+      h += '<div class="repo-card"><div class="repo-name">' + (repo.name||repo.path||repo) + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhum repo local</div>';
+  } catch(e) { Toast.error('Erro: '+e.message); g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadIssues() {
+  const g = document.getElementById('issues-list');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/github/repos/hub3jarvis/issues');
+    const d = await r.json();
+    let h = '';
+    for (const issue of (d.issues||d||[]).slice(0,10)) {
+      h += '<div class="repo-card"><div class="repo-name">#' + (issue.number||'') + ' ' + (issue.title||'') + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhuma issue</div>';
+  } catch(e) { Toast.error('Erro: '+e.message); g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadSkills() {
+  const g = document.getElementById('skills-grid');
+  const t = document.getElementById('skills-total');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/skills');
+    const d = await r.json();
+    const skills = d.skills || {};
+    if (t) t.textContent = '(' + Object.keys(skills).length + ' skills)';
+    let h = '';
+    for (const [k, s] of Object.entries(skills)) {
+      const c = COLORS[s.color] || '#00d4ff';
+      h += '<div style="background:var(--bg-input);border:1px solid ' + c + ';border-radius:10px;padding:16px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">';
+      h += '<span style="font-size:14px;font-weight:600;color:' + c + '">' + s.title + '</span>';
+      h += '<span style="font-size:11px;background:' + c + ';color:#000;padding:2px 8px;border-radius:10px">' + s.subskills + '</span></div>';
+      h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">' + (s.description||'').slice(0,80) + '...</div>';
+      h += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+      for (const cmd of (s.commands||[]).slice(0,3)) {
+        h += '<span style="font-size:10px;background:var(--bg);color:var(--cyan);border:1px solid var(--border);padding:2px 6px;border-radius:4px">' + cmd + '</span>';
+      }
+      h += '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhuma skill encontrada</div>';
+  } catch(e) { Toast.error('Erro: '+e.message); g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function autonomousMode() {
+  const input = document.getElementById('auto-input');
+  const result = document.getElementById('auto-result');
+  if (!input || !result) return;
+  const text = input.value.trim();
+  if (!text) return;
+  result.innerHTML = '<span class="spinner"></span> JARVIS analisando...';
+  try {
+    const r = await fetch(API + '/skills/autonomous', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:text})});
+    const d = await r.json();
+    if (!d.detected_skills || d.detected_skills.length === 0) {
+      result.innerHTML = '<div style="background:var(--bg-input);border:1px solid var(--orange);border-radius:8px;padding:12px;font-size:13px">' + d.message + '</div>';
+    } else {
+      let h = '<div style="background:var(--bg-input);border:1px solid var(--green);border-radius:8px;padding:12px">';
+      h += '<div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">JARVIS detectou ' + d.detected_skills.length + ' skill(s):</div>';
+      for (const s of d.analysis) {
+        h += '<div style="display:flex;justify-content:space-between;padding:8px;margin-bottom:4px;background:var(--bg);border-radius:6px;border-left:3px solid var(--cyan)">';
+        h += '<span><strong>' + s.title + '</strong></span>';
+        h += '<span style="color:var(--text-muted);font-size:12px">' + (s.suggested_command||'') + '</span></div>';
+      }
+      h += '<div style="font-size:12px;color:var(--text-muted);margin-top:8px">' + d.message + '</div></div>';
+      result.innerHTML = h;
+    }
+    input.value = '';
+  } catch(e) { Toast.error('Erro: '+e.message); result.innerHTML = '<div style="color:var(--red)">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadModels() {
+  const g = document.getElementById('models-list');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/ai/models');
+    const d = await r.json();
+    const models = d.models || d || [];
+    let h = '';
+    for (const m of models) h += '<div class="service-card online"><div class="service-name">' + (m.name||m.model||m) + '</div></div>';
+    g.innerHTML = h || '<div class="loading">Nenhum modelo Ollama</div>';
+  } catch(e) { Toast.error('Erro: '+e.message); g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadIoT() {
+  const g = document.getElementById('iot-grid');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  const devices = [
+    {name:'Smart Lights',status:'online',value:'Ligado 83%'},{name:'Thermostat',status:'online',value:'22 C'},
+    {name:'Security Cam',status:'online',value:'Transmitindo'},{name:'Smart TV',status:'offline',value:'Desligada'},
+    {name:'Door Lock',status:'online',value:'Trancada'},{name:'Speaker',status:'online',value:'Volume 45%'}
+  ];
+  g.innerHTML = devices.map(d => '<div class="service-card ' + d.status + '"><div class="service-name">' + d.name + '</div><div class="service-status">' + d.value + '</div></div>').join('');
+}
+
+async function loadScrapers() {
+  const g = document.getElementById('scraper-grid');
+  if (!g) return;
+  const scrapers = ['Firecrawl','Crawl4AI','Browser Use','Crawlee','Scrapy','MarkItDown','Scrapling','AutoScraper','curl-impersonate','scrcpy'];
+  g.innerHTML = scrapers.map(s => '<div class="service-card online"><div class="service-name">' + s + '</div><div class="service-status">Disponivel</div></div>').join('');
+}
+
+async function loadAIModels() {
+  const sel = document.getElementById('ai-model');
+  if (!sel) return;
+  sel.innerHTML = '<option>Carregando...</option>';
+  try {
+    const r = await fetch(API + '/ai/models');
+    const d = await r.json();
+    const models = d.models || d || [];
+    sel.innerHTML = models.map(m => '<option value="' + (m.name||m.model||m) + '">' + (m.name||m.model||m) + '</option>').join('');
+    const info = document.getElementById('ai-models-info');
+    if (info) info.innerHTML = models.slice(0,12).map(m => '<div style="background:var(--bg-input);padding:8px 12px;border-radius:6px;font-size:12px;border:1px solid var(--border);color:var(--cyan)">' + (m.name||m.model||m) + '</div>').join('');
+  } catch(e) { Toast.error('Erro: '+e.message); sel.innerHTML = '<option>Erro ao carregar</option>'; }
+}
+
+function updateClock() {
+  const el = document.getElementById('header-time');
+  if (el) el.textContent = new Date().toLocaleTimeString('pt-BR');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadServices();
+  setTimeout(startMicrophone, 1000);
+  // Restaurar muapi-key salva
+  const savedKey = localStorage.getItem('muapi-key');
+  const keyInput = document.getElementById('muapi-key');
+  if (savedKey && keyInput) {
+    keyInput.value = savedKey;
+  }
+  // Salvar chave fornecida se ainda nao estiver salva
+  if (!savedKey && keyInput) {
+    localStorage.setItem('muapi-key', 'b917bd66fac33aa022f4e06496f017316a3d0edbaa866d72a2cb23a91ef8da9f');
+    keyInput.value = 'b917bd66fac33aa022f4e06496f017316a3d0edbaa866d72a2cb23a91ef8da9f';
+    keyInput.style.borderColor = 'var(--green)';
+  }
+});
+</script>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+const COLORS = {red:'#ff4444',green:'#00e676',blue:'#00d4ff',orange:'#ff8c00',yellow:'#ffd700',violet:'#b388ff',fuchsia:'#e040fb',sky:'#4fc3f7'};
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const section = document.getElementById('section-' + name);
+  if (section) section.classList.add('active');
+  const nav = document.querySelector('[data-section="' + name + '"]');
+  if (nav) nav.classList.add('active');
+  if (name === 'services') loadServices();
+  if (name === 'vault') loadVault();
+  if (name === 'github') loadGithub();
+  if (name === 'repos') loadReposLocal();
+  if (name === 'issues') loadIssues();
+  if (name === 'skills') loadSkills();
+  if (name === 'models') loadModels();
+  if (name === 'scrapers') loadScrapers();
+  if (name === 'aistudio') loadAIModels();
+  if (name === 'iot') loadIoT();
+}
+
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.pitch = 0.9;
+        utterance.rate = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+let recognition;
+let isListening = false;
+let autoRestart = true;
+
+function startMicrophone() {
+    if (isListening) return;
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onstart = function() {
+        isListening = true;
+        const bar = document.getElementById('voice-bar');
+        const icon = document.getElementById('voice-icon');
+        const sub = document.getElementById('voice-sub');
+        if (bar) bar.classList.add('listening');
+        if (icon) icon.textContent = '[stop]';
+        if (sub) sub.textContent = 'Sempre ouvindo... Clique para parar';
+    };
+    recognition.onresult = function(event) {
+        const res = document.getElementById('voice-result');
+        const chatInput = document.getElementById('chat-input');
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+        }
+        if (finalTranscript && chatInput) {
+            chatInput.value = finalTranscript;
+            const enterEvent = new KeyboardEvent('keypress', {key:'Enter', code:'Enter', which:13, keyCode:13, bubbles:true});
+            chatInput.dispatchEvent(enterEvent);
+        }
+    };
+    recognition.onerror = function(event) {
+        isListening = false;
+        if (autoRestart && event.error !== 'not-allowed') setTimeout(startMicrophone, 1000);
+    };
+    recognition.onend = function() {
+        isListening = false;
+        if (autoRestart) setTimeout(startMicrophone, 500);
+    };
+    try { recognition.start(); } catch(e) {}
+}
+
+function toggleVoice() {
+    const bar = document.getElementById('voice-bar');
+    const icon = document.getElementById('voice-icon');
+    const sub = document.getElementById('voice-sub');
+    if (isListening) {
+        autoRestart = false;
+        if (recognition) { recognition.stop(); recognition = null; }
+        isListening = false;
+        if (bar) bar.classList.remove('listening');
+        if (icon) icon.textContent = '[mic]';
+        if (sub) sub.textContent = 'Microfone desligado';
+    } else {
+        autoRestart = true;
+        startMicrophone();
+    }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const box = document.getElementById('chat-box');
+  const btn = document.getElementById('chat-btn');
+  const text = input.value.trim();
+  if (!text) return;
+  box.innerHTML += '<div class="chat-msg user">' + text.replace(/</g,'&lt;') + '</div>';
+  input.value = '';
+  btn.disabled = true;
+  box.scrollTop = box.scrollHeight;
+  try {
+    const r = await fetch(API + '/ai/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,model:'llama3.2:1b'})});
+    const d = await r.json();
+    const resposta = d.response||d.message||'Sem resposta';
+    box.innerHTML += '<div class="chat-msg hub3">' + resposta + '</div>';
+    speakText(resposta);
+  } catch(e) {
+    box.innerHTML += '<div class="chat-msg hub3" style="color:var(--red)">Erro: ' + e.message + '</div>';
+  }
+  btn.disabled = false;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function loadServices() {
+  const g = document.getElementById('services-grid');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/services/status');
+    const d = await r.json();
+    const sv = d.services || d || {};
+    let h = '';
+    for (const [n, s] of Object.entries(sv)) {
+      if (n === 'ollama') continue;
+      const on = s === 'online' || s === true || (typeof s === 'object' && s.status === 'online');
+      h += '<div class="service-card ' + (on?'online':'offline') + '"><div class="service-name">' + n + '</div><div class="service-status">' + (on?'Online':'Offline') + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhum servico</div>';
+  } catch(e) { g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadVault() {
+  const g = document.getElementById('vault-grid');
+  const n = document.getElementById('vault-info');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/vault/stats');
+    const d = await r.json();
+    if (n) n.textContent = 'Total: ' + (d.total_files||0) + ' arquivos, ' + (d.total_size_formatted||d.total_size||'0 MB');
+    let h = '';
+    for (const [c, v] of Object.entries(d)) {
+      if (c === 'total_files' || c === 'total_size' || c === 'total_size_formatted') continue;
+      h += '<div class="vault-item"><div class="vault-cat">' + c + '</div><div class="vault-count">' + (typeof v === 'object' ? v.count||v.size||v : v) + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Vault vazio</div>';
+  } catch(e) { g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadGithub() {
+  const rd = document.getElementById('github-repos');
+  const cd = document.getElementById('github-commits');
+  if (!rd) return;
+  rd.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  if (cd) cd.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/github/repos');
+    const d = await r.json();
+    let h = '';
+    for (const repo of (d.repos||d||[])) {
+      h += '<div class="repo-card"><div class="repo-name">' + (repo.name||repo) + '</div></div>';
+    }
+    rd.innerHTML = h || '<div class="loading">Nenhum repo</div>';
+    if (cd) {
+      const rc = await fetch(API + '/github/repos/hub3jarvis/commits');
+      const dc = await rc.json();
+      let ch = '';
+      for (const c of (dc.commits||dc||[]).slice(0,10)) {
+        ch += '<div class="commit-item"><span class="commit-sha">' + (c.sha||'').slice(0,7) + '</span><span class="commit-msg">' + (c.commit?.message||c.message||'') + '</span></div>';
+      }
+      cd.innerHTML = ch || '<div class="loading">Nenhum commit</div>';
+    }
+  } catch(e) { rd.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadReposLocal() {
+  const g = document.getElementById('repos-local');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/repos/local');
+    const d = await r.json();
+    let h = '';
+    for (const repo of (d.repos||d||[])) {
+      h += '<div class="repo-card"><div class="repo-name">' + (repo.name||repo.path||repo) + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhum repo local</div>';
+  } catch(e) { g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadIssues() {
+  const g = document.getElementById('issues-list');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/github/repos/hub3jarvis/issues');
+    const d = await r.json();
+    let h = '';
+    for (const issue of (d.issues||d||[]).slice(0,10)) {
+      h += '<div class="repo-card"><div class="repo-name">#' + (issue.number||'') + ' ' + (issue.title||'') + '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhuma issue</div>';
+  } catch(e) { g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadSkills() {
+  const g = document.getElementById('skills-grid');
+  const t = document.getElementById('skills-total');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/skills');
+    const d = await r.json();
+    const skills = d.skills || {};
+    if (t) t.textContent = '(' + Object.keys(skills).length + ' skills)';
+    let h = '';
+    for (const [k, s] of Object.entries(skills)) {
+      const c = COLORS[s.color] || '#00d4ff';
+      h += '<div style="background:var(--bg-input);border:1px solid ' + c + ';border-radius:10px;padding:16px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">';
+      h += '<span style="font-size:14px;font-weight:600;color:' + c + '">' + s.title + '</span>';
+      h += '<span style="font-size:11px;background:' + c + ';color:#000;padding:2px 8px;border-radius:10px">' + s.subskills + '</span></div>';
+      h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">' + (s.description||'').slice(0,80) + '...</div>';
+      h += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+      for (const cmd of (s.commands||[]).slice(0,3)) {
+        h += '<span style="font-size:10px;background:var(--bg);color:var(--cyan);border:1px solid var(--border);padding:2px 6px;border-radius:4px">' + cmd + '</span>';
+      }
+      h += '</div></div>';
+    }
+    g.innerHTML = h || '<div class="loading">Nenhuma skill encontrada</div>';
+  } catch(e) { g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function autonomousMode() {
+  const input = document.getElementById('auto-input');
+  const result = document.getElementById('auto-result');
+  if (!input || !result) return;
+  const text = input.value.trim();
+  if (!text) return;
+  result.innerHTML = '<span class="spinner"></span> JARVIS analisando...';
+  try {
+    const r = await fetch(API + '/skills/autonomous', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:text})});
+    const d = await r.json();
+    if (!d.detected_skills || d.detected_skills.length === 0) {
+      result.innerHTML = '<div style="background:var(--bg-input);border:1px solid var(--orange);border-radius:8px;padding:12px;font-size:13px">' + d.message + '</div>';
+    } else {
+      let h = '<div style="background:var(--bg-input);border:1px solid var(--green);border-radius:8px;padding:12px">';
+      h += '<div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">JARVIS detectou ' + d.detected_skills.length + ' skill(s):</div>';
+      for (const s of d.analysis) {
+        h += '<div style="display:flex;justify-content:space-between;padding:8px;margin-bottom:4px;background:var(--bg);border-radius:6px;border-left:3px solid var(--cyan)">';
+        h += '<span><strong>' + s.title + '</strong></span>';
+        h += '<span style="color:var(--text-muted);font-size:12px">' + (s.suggested_command||'') + '</span></div>';
+      }
+      h += '<div style="font-size:12px;color:var(--text-muted);margin-top:8px">' + d.message + '</div></div>';
+      result.innerHTML = h;
+    }
+    input.value = '';
+  } catch(e) { result.innerHTML = '<div style="color:var(--red)">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadModels() {
+  const g = document.getElementById('models-list');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  try {
+    const r = await fetch(API + '/ai/models');
+    const d = await r.json();
+    const models = d.models || d || [];
+    let h = '';
+    for (const m of models) h += '<div class="service-card online"><div class="service-name">' + (m.name||m.model||m) + '</div></div>';
+    g.innerHTML = h || '<div class="loading">Nenhum modelo Ollama</div>';
+  } catch(e) { g.innerHTML = '<div class="loading">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadIoT() {
+  const g = document.getElementById('iot-grid');
+  if (!g) return;
+  g.innerHTML = '<div class="loading"><span class="spinner"></span> Carregando...</div>';
+  const devices = [
+    {name:'Smart Lights',status:'online',value:'Ligado 83%'},{name:'Thermostat',status:'online',value:'22 C'},
+    {name:'Security Cam',status:'online',value:'Transmitindo'},{name:'Smart TV',status:'offline',value:'Desligada'},
+    {name:'Door Lock',status:'online',value:'Trancada'},{name:'Speaker',status:'online',value:'Volume 45%'}
+  ];
+  g.innerHTML = devices.map(d => '<div class="service-card ' + d.status + '"><div class="service-name">' + d.name + '</div><div class="service-status">' + d.value + '</div></div>').join('');
+}
+
+async function loadScrapers() {
+  const g = document.getElementById('scraper-grid');
+  if (!g) return;
+  const scrapers = ['Firecrawl','Crawl4AI','Browser Use','Crawlee','Scrapy','MarkItDown','Scrapling','AutoScraper','curl-impersonate','scrcpy'];
+  g.innerHTML = scrapers.map(s => '<div class="service-card online"><div class="service-name">' + s + '</div><div class="service-status">Disponivel</div></div>').join('');
+}
+
+async function loadAIModels() {
+  const sel = document.getElementById('ai-model');
+  if (!sel) return;
+  sel.innerHTML = '<option>Carregando...</option>';
+  try {
+    const r = await fetch(API + '/ai/models');
+    const d = await r.json();
+    const models = d.models || d || [];
+    sel.innerHTML = models.map(m => '<option value="' + (m.name||m.model||m) + '">' + (m.name||m.model||m) + '</option>').join('');
+    const info = document.getElementById('ai-models-info');
+    if (info) info.innerHTML = models.slice(0,12).map(m => '<div style="background:var(--bg-input);padding:8px 12px;border-radius:6px;font-size:12px;border:1px solid var(--border);color:var(--cyan)">' + (m.name||m.model||m) + '</div>').join('');
+  } catch(e) { sel.innerHTML = '<option>Erro ao carregar</option>'; }
+}
+
+function updateClock() {
+  const el = document.getElementById('header-time');
+  if (el) el.textContent = new Date().toLocaleTimeString('pt-BR');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadServices();
+  setTimeout(startMicrophone, 1000);
+});
+</script>
+</body>
+</html>

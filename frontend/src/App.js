@@ -7,6 +7,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import ConsensusPage from "@/pages/ConsensusPage";
 import SmartHomePage from "@/pages/SmartHomePage";
 import ChatPage from "@/pages/ChatPage";
+import BrainPage from "@/pages/BrainPage";
 
 function Protected({ children }) {
   const { user, loading } = useApp();
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/consensus" element={<Protected><ConsensusPage /></Protected>} />
           <Route path="/smart-home" element={<Protected><SmartHomePage /></Protected>} />
           <Route path="/chat" element={<Protected><ChatPage /></Protected>} />
+          <Route path="/brain" element={<Protected><BrainPage /></Protected>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

@@ -61,3 +61,33 @@ do zero em FastAPI + React seguindo 4 mockups fornecidos.
 - `/app/frontend/src/components/AppShell.jsx` — sidebar/rail nav
 - `/app/frontend/src/locales/translations.js` — EN/PT strings
 - `/app/design_guidelines.json` — HUD design system
+
+## Sprint 2 — Absorption from hub3pixellab/hub3jarvis (Jan 2026)
+
+**Repo original clonado em `/app/legacy_repo/` para referência.**
+
+### Módulos absorvidos e refatorados para MongoDB (v4.2):
+- **`modules/policy_engine.py`** — 3 Leis: whitelist protection, sensitive action confirmation, blocked search sources (onion/darknet)
+- **`modules/second_brain.py`** — memória de longo prazo persistida em MongoDB (`second_brain_knowledge` + `second_brain_prefs`) com busca por palavra-chave e get_context() para injeção automática em prompts
+- **`modules/self_learning.py`** — log de todas as interações do Consensus, sistema de feedback (positive/negative/neutral) e cálculo de padrões de uso por modelo + taxa de satisfação
+
+### Novos endpoints:
+- `POST /api/brain/add` · `POST /api/brain/search` · `GET /api/brain/recent` · `GET /api/brain/stats`
+- `POST /api/brain/pref` · `GET /api/brain/prefs`
+- `POST /api/learning/feedback` · `GET /api/learning/patterns` · `GET /api/learning/recent`
+- `POST /api/policy/check` · `GET /api/policy/whitelist` · `POST /api/policy/whitelist`
+
+### Integração automática:
+- `/api/consensus/query` agora **injeta contexto do Second Brain** antes de chamar as 3 LLMs e **loga cada resposta vencedora** no Self-Learning
+- `/api/chat/send` agora **checa Policy Engine antes de comandos de dispositivo** (whitelist bloqueia se necessário) e **injeta contexto do Second Brain** no prompt do Jarvis + **memoriza conversas relevantes** (>20 chars)
+
+### Nova página frontend `/brain`:
+- 3 abas: Segundo Cérebro (add/search/recent), Motor de Políticas (3 leis + whitelist CRUD), Auto-Aprendizado (métricas)
+- 4 stat boxes no topo: Knowledge count, Preferences, Whitelist, AI Interactions
+- Toda em i18n PT/EN
+
+### Verificação:
+- Adicionei manualmente "Meu projeto principal é o Project Orion focado em análise financeira Q2 com IA"
+- No chat perguntei "O que você sabe sobre meu Project Orion?" → Jarvis respondeu usando o contexto correto ✅
+- Adicionei "Mãe" como whitelist absolute → policy/check com phone dela bloqueou WhatsApp ✅
+- Consensus query gerou log_id e apareceu no /learning/patterns ✅
