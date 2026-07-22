@@ -1,0 +1,160 @@
+{
+  "project_name": "Hub3 JARVIS v4.2",
+  "theme_strategy": {
+    "mode": "dark",
+    "description": "Futuristic AI Life Operating System Dashboard with a 'Terminal/HUD' retro-futurism aesthetic mixed with modern sleekness. High contrast, neon accents against deep navy void.",
+    "anti_pattern_avoidance": "No flat generic SaaS gradients. No muddy gray backgrounds. Use stark technical grid lines, distinct glowing boundaries, and high-contrast typographic hierarchy."
+  },
+  "color_system": {
+    "background": {
+      "dashboard": "#0A0E27",
+      "card": "#0F1729",
+      "overlay_scrim": "rgba(10, 14, 39, 0.85)"
+    },
+    "primary": {
+      "cyan_electric": "#00D4FF",
+      "glow_cyan": "rgba(0, 212, 255, 0.4)",
+      "halo_cyan": "rgba(0, 212, 255, 0.15)"
+    },
+    "action": {
+      "orange": "#FF8C42",
+      "glow_orange": "rgba(255, 140, 66, 0.4)"
+    },
+    "status": {
+      "positive_online": "#00E676",
+      "alert_offline": "#FF4757"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#8B95A5",
+      "accent": "#00D4FF"
+    },
+    "gradients": {
+      "progress_bar": "linear-gradient(90deg, #00D4FF 0%, #FF8C42 100%)",
+      "neural_link": "linear-gradient(to right, rgba(0,212,255,0.8), rgba(255,140,66,0.8))"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "branding_display": "Unbounded, sans-serif",
+      "headings": "Inter, sans-serif",
+      "body": "Inter, sans-serif",
+      "monospace": "JetBrains Mono, monospace"
+    },
+    "rules": {
+      "branding": "Use 'Unbounded' only for the 'Hub3 JARVIS' logo and major hero numbers to give an elite tech vibe.",
+      "titles": "Inter Bold with tracking-tight (letter-spacing: -0.025em).",
+      "labels": "Inter Uppercase with tracking-[0.2em] (small caps effect) for all sub-labels, card headers, and device statuses.",
+      "metrics": "Massive bold numbers (e.g., text-5xl font-black) using Inter or Unbounded. High contrast.",
+      "anti_pattern": "Do not center align standard text or paragraphs. Left-align for technical HUD precision."
+    }
+  },
+  "spacing_and_layout": {
+    "grid_system": "High Density Grid for Dashboards. grid-cols-1 md:grid-cols-4 lg:grid-cols-8. Tightly packed widgets with gap-4 or gap-6.",
+    "sidebar": "Fixed left sidebar (w-64 or w-72) for navigation, distinct from the main canvas.",
+    "padding": "Use generous internal padding (p-6, p-8) inside the cards before content begins.",
+    "alignment": "Optical alignment over geometrical. Numbers should align by decimal or right-edge if stacked."
+  },
+  "surface_strategies": {
+    "cards": {
+      "background": "#0F1729",
+      "border": "1px solid rgba(0, 212, 255, 0.3)",
+      "box_shadow": "0 0 15px rgba(0, 212, 255, 0.05), inset 0 0 20px rgba(0, 212, 255, 0.02)",
+      "corner_brackets": "Subtle corner brackets (absolute positioned 2x2 px borders or SVG segments at the 4 corners of cards) colored in #00D4FF. This is CRITICAL for the HUD aesthetic.",
+      "radius": "rounded-lg or rounded-xl (subtle roundness, max 12px), but corner brackets give it a sharp technical look."
+    },
+    "buttons": {
+      "shape": "Pill-shaped (rounded-full).",
+      "primary": "Solid #FF8C42 with hover:bg-orange-400 and box-shadow glow.",
+      "secondary": "Border 1px #00D4FF with transparent bg, text #00D4FF. Hover: bg-cyan-900/30."
+    },
+    "toggles": {
+      "active": "bg-[#FF8C42] shadow-[0_0_10px_#FF8C42]",
+      "inactive": "bg-slate-700"
+    },
+    "icons": {
+      "style": "Circular icons wrapped in a halo of the area's color (e.g., bg-cyan-500/20 with border border-cyan-500/50 and text-cyan-400)."
+    }
+  },
+  "motion_and_interactions": {
+    "framer_motion": "Use Framer Motion for micro-animations on all cards and transitions.",
+    "hover_states": "Cards lift slightly (-translate-y-1) and cyan glow intensifies (shadow-[0_0_20px_rgba(0,212,255,0.2)]).",
+    "waveforms": "Animated waveform bars (CSS keyframes scaling Y-axis) for the 'Ei Hub' button and 'Speaker' device cards. Color: #00D4FF.",
+    "progress_bars": "Animated width expansion on mount.",
+    "neural_graph": "React Force Graph (react-force-graph-2d) with floating particles connecting 8 nodes to the central Hub3. Links should glow cyan/orange."
+  },
+  "layout_specifics": {
+    "layout_1_life_os": {
+      "sidebar": "8 life areas with distinct icons.",
+      "main_viz": "AI Brain Network animated graph in center.",
+      "ei_hub_button": "Pill button with waveform animation indicating voice readiness.",
+      "consensus_panel": "Breakdown of 8 models using progress bars (gradient cyan->orange)."
+    },
+    "layout_2_consensus": {
+      "diagram": "Flow diagram connecting 7 model cards to a central orange gear ('Consensus Engine').",
+      "components": "Voting mechanism displays, cost optimization metrics, response score indicators."
+    },
+    "layout_3_smart_home": {
+      "grid": "4x2 device cards.",
+      "cards": [
+        "Smart Lights: Circular color wheel interface",
+        "Thermostat: Circular dial interface (SVG or Framer Motion rotate)",
+        "Security Cameras: Video feed preview",
+        "Smart TV: Cinematic preview image",
+        "Door Lock: Big toggle button",
+        "Speaker: Playing track + animated waveform",
+        "Wearable Health: Heart rate graph (Recharts or simple SVG path)",
+        "Smart Plugs: List with orange toggles"
+      ]
+    },
+    "layout_4_chat": {
+      "structure": "WhatsApp-like layout. Left sidebar with conversations (badges for unread). Main chat area.",
+      "messages": "Bubbles with corner brackets. Inline action cards rendered inside the chat flow.",
+      "input": "Bottom input bar with attach, emoji, send button (orange)."
+    }
+  },
+  "media": {
+    "images": {
+      "ai_avatar": {
+        "url": "https://images.pexels.com/photos/18799044/pexels-photo-18799044.jpeg",
+        "description": "Close-up of a futuristic humanoid robot with blue LED eyes, used for the main AI JARVIS avatar."
+      },
+      "user_avatar": {
+        "url": "https://images.unsplash.com/photo-1760004941335-6feccb7f800a",
+        "description": "User profile avatar for chat or top nav."
+      },
+      "security_camera": {
+        "url": "https://images.unsplash.com/photo-1630699144035-c0f6311ec482",
+        "description": "Modern living room view used for the Smart Home Security Camera card."
+      },
+      "smart_tv": {
+        "url": "https://images.unsplash.com/photo-1613280194169-6bb2f32a6bfa",
+        "description": "Cinematic TV screen used for the Smart TV control card."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the dark navy background (#0A0E27) and card backgrounds (#0F1729).",
+    "Implement the 'corner brackets' on cards using absolute positioned divs or pseudo-elements (::before/::after) with 1px border colored #00D4FF on the corners of the cards. This is a critical HUD visual requirement.",
+    "Do NOT use raw generic HTML <select>, <input date> etc. Use custom styled components mimicking Shadcn structure if building from scratch, heavily customized to the HUD theme.",
+    "Implement the PT/EN language toggle in the header/sidebar.",
+    "Ensure 'Ei Hub' button has a real CSS animation making 3-4 vertical bars scale up and down to represent a voice waveform.",
+    "Install and integrate `react-force-graph-2d` for the AI Brain Network in Layout 1.",
+    "For the Progress bars, strictly use `bg-gradient-to-r from-[#00D4FF] to-[#FF8C42]`.",
+    "Install `lucide-react` for icons if not present, and render them inside a circular div with `bg-cyan-500/10` and `border border-cyan-500/30`.",
+    "Add `data-testid` to all toggles, buttons, and navigation items."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy and glowing drop-shadows rather than flat borders.",
+    "You MUST NOT apply universal transition (e.g., transition: all). Always add transitions for specific interactive elements excluding transforms.",
+    "You MUST NOT center align the app container. Do not add `.App { text-align: center; }`.",
+    "Always use modern button styles like pill-shaped with interaction animations & color relevant to the app style.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons. Use SVGs/Lucide.",
+    "Every interaction needs micro-animations - hover states, transitions, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., data-testid='smart-lights-toggle')."
+  ]
+}
