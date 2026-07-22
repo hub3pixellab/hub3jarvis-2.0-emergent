@@ -40,6 +40,7 @@ export const translations = {
     hub3JarvisOnline: "Hub3 Jarvis Online", allSystemsOperational: "All Systems Operational",
     chatSearch: "Search or start new chat", today: "Today", typeMessage: "Ei Hub, turn on the lights",
     hub3SmartLiving: "Hub3 Smart Living", connectingFuture: "Connecting the future of your home.",
+    noAccount: "Don't have an account?", haveAccount: "Already have an account?",
     verified: "Verified",
   },
   pt: {
@@ -83,6 +84,7 @@ export const translations = {
     hub3JarvisOnline: "Hub3 Jarvis Online", allSystemsOperational: "Todos os Sistemas Operacionais",
     chatSearch: "Buscar ou iniciar novo chat", today: "Hoje", typeMessage: "Ei Hub, acenda as luzes",
     hub3SmartLiving: "Hub3 Smart Living", connectingFuture: "Conectando o futuro da sua casa.",
+    noAccount: "Não tem uma conta?", haveAccount: "Já tem uma conta?",
     verified: "Verificado",
   },
 };

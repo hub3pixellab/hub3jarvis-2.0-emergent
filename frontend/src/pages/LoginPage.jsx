@@ -79,9 +79,9 @@ export default function LoginPage() {
 
           <div className="text-center text-sm text-slate-400 mt-5">
             {mode === "login" ? (
-              <>Don't have an account? <button type="button" onClick={() => setMode("register")} data-testid="switch-register" className="text-cyan hover:underline">{t.register}</button></>
+              <>{t.noAccount} <button type="button" onClick={() => setMode("register")} data-testid="switch-register" className="text-cyan hover:underline">{t.register}</button></>
             ) : (
-              <>Already have an account? <button type="button" onClick={() => setMode("login")} data-testid="switch-login" className="text-cyan hover:underline">{t.login}</button></>
+              <>{t.haveAccount} <button type="button" onClick={() => setMode("login")} data-testid="switch-login" className="text-cyan hover:underline">{t.login}</button></>
             )}
           </div>
         </div>
