@@ -91,3 +91,48 @@ do zero em FastAPI + React seguindo 4 mockups fornecidos.
 - No chat perguntei "O que você sabe sobre meu Project Orion?" → Jarvis respondeu usando o contexto correto ✅
 - Adicionei "Mãe" como whitelist absolute → policy/check com phone dela bloqueou WhatsApp ✅
 - Consensus query gerou log_id e apareceu no /learning/patterns ✅
+
+## Sprint 3 — 4 Melhorias avançadas (Jan 2026)
+
+### 1. Vector Search real ✅
+- `modules/embeddings.py` — **fastembed** com `paraphrase-multilingual-MiniLM-L12-v2` (384-dim, PT+EN, ONNX ~90MB, 100% offline)
+- Modelo pré-carregado em background no startup
+- `SecondBrain.search(query, mode='auto|semantic|keyword')` — busca semântica com fallback automático
+- Verificado: query "quem são meus companheiros de trabalho" achou "Minha equipe: Diego (eng), Ana Paula (design), Laura (produto)" via similaridade coseno
+- `POST /api/brain/reindex` — recomputa embeddings faltantes
+
+### 2. 👍/👎 feedback no Consensus ✅
+- Após cada `POST /api/consensus/query`, resposta inclui `log_id`
+- UI mostra 3 botões (positive / neutral / negative) no card AI Response Scores
+- Chama `POST /api/learning/feedback` — `learning_patterns` já mostra satisfaction_rate 50% após 1 feedback
+
+### 3. Chat streaming SSE token-a-token ✅
+- Novo endpoint `GET /api/chat/stream` (SSE — token via query param pois EventSource não envia headers)
+- Emite eventos `meta`, `data` (deltas), `done`, `error`
+- ChatPage.jsx agora usa `EventSource` — mensagens aparecem letra-por-letra com cursor piscando (`animate-pulse`)
+- Continua salvando no Mongo + memorizando conversas relevantes no Second Brain
+
+### 4. Ingestão em batch do second-brain.json ✅
+- **d1)** `POST /api/brain/import` (JSON body) e `POST /api/brain/import-file` (upload multipart)
+- UI: botão "Import JSON" na página `/brain` (label + input file hidden) + botão "Re-index" para vetorizar entradas antigas
+- **d2)** `scripts/ingest_second_brain.py` CLI:
+  ```
+  python scripts/ingest_second_brain.py --path /Volumes/JARVIS\ HUB3/hub3-jarvis/data/second-brain.json --user admin@hub3.ai
+  ```
+  Aceita array ou `{knowledge:[], preferences:{}}`, faz batch de 32 embeddings, resolve user por email ou id
+- Testado com JSON fixture `/app/legacy_repo/data/second-brain.json` → 5 conhecimentos + 3 preferências ingeridos com sucesso
+
+### Estado atual (verificado via curl + screenshots)
+- 9/9 conhecimentos com embeddings, 3 preferências (language=pt-BR, timezone=America/Sao_Paulo, morning_briefing=true)
+- 2 interações de consenso logadas, 1 feedback positivo, custo total $0.00158
+- Streaming ativo, inline device card aparecendo nas respostas do Jarvis com comando "acenda as luzes"
+
+### Novos endpoints
+- `POST /api/brain/import` · `POST /api/brain/import-file` · `POST /api/brain/reindex`
+- `GET  /api/chat/stream?text=&conversation_id=&token=` (SSE)
+
+### Novos arquivos
+- `/app/backend/modules/embeddings.py`
+- `/app/scripts/ingest_second_brain.py`
+- `/app/legacy_repo/data/second-brain.json` (fixture)
+
